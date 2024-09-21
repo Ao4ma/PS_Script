@@ -1,0 +1,89 @@
+<#
+.SYNOPSIS
+エクセルファイルをインポートして配列として処理するスクリプト。
+
+.DESCRIPTION
+このスクリプトは、指定されたデフォルトのエクセルファイルをインポートし、その内容を配列として処理します。
+エクセルファイルのパスが存在する場合、ファイルをインポートし、各行を処理します。
+
+.PARAMETER $defaultFilePath
+デフォルトのエクセルファイルのパス。初期値は "S:\技術部storage\管理課\PDM復旧\ファイル.xlsx" です。
+
+.PARAMETER $homeFolder
+スクリプトのホームフォルダー。初期値は "C:\Users\y0927\Documents\GitHub\PS_Script" です。
+
+.FUNCTION Import-ExcelFile
+指定されたパスのエクセルファイルをインポートし、配列として返します。
+- $filePath: インポートするエクセルファイルのパス。デフォルトは $defaultFilePath です。
+
+.EXAMPLE
+$dataArray = Import-ExcelFile
+エクセルファイルをインポートし、配列として $dataArray に格納します。
+.NOTESエクセルファイルが存在しない場合、エラーメッセージを表示し、$null を返します。
+#>   foreach ($row in $dataArray) {
+        # Process each row
+        Write-Output $row
+    }
+}
+param (
+    [string]$defaultFilePath,
+    [string]$homeFolder
+)
+
+$defaultFilePath = "S:\\技術部storage\\管理課\\PDM復旧\\ファイル.xlsx"
+$homeFolder = "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script"
+
+function Import-ExcelFile {
+    param (
+        [string]$filePath = $defaultFilePath
+    )
+
+    # エクセルファイルの存在を確認
+    if (-Not (Test-Path -Path $filePath)) {
+        Write-Error "エクセルファイルが見つかりません: $filePath"
+        return $null
+    }
+
+    # エクセルファイルをインポート
+    try {
+        $excel = New-Object -ComObject Excel.Application
+        $workbook = $excel.Workbooks.Open($filePath)
+        $sheet = $workbook.Sheets.Item(1)
+        $usedRange = $sheet.UsedRange
+        $dataArray = @()
+
+        # エクセルの内容を配列に格納
+        foreach ($row in $usedRange.Rows) {
+            $rowData = @()
+            foreach ($cell in $row.Columns) {
+                $rowData += $cell.Text
+            }
+            $dataArray += ,$rowData
+        }
+
+        # クリーンアップ
+        $workbook.Close($false)
+        $excel.Quit()
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($sheet) | Out-Null
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook) | Out-Null
+        [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
+        [GC]::Collect()
+        [GC]::WaitForPendingFinalizers()
+
+        return $dataArray
+    } catch {
+        Write-Error "エクセルファイルのインポート中にエラーが発生しました: $_"
+        return $null
+    }
+}
+
+# デフォルトのエクセルファイルをインポート
+$dataArray = Import-ExcelFile
+
+# インポートしたデータを処理
+if ($null -ne $dataArray) {
+    foreach ($row in $dataArray) {
+        # 各行を処理
+        Write-Output $row
+    }
+}
