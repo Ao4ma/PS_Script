@@ -32,14 +32,13 @@ function Import-ExcelFile {
     }
 
     if ($shouldProcess) {
-        # 出力フォルダ内の既存CSVファイルを削除
-        Get-ChildItem -Path $outputFolder -Filter *.csv | Remove-Item -Force
-
         # エクセルファイルの副本を作成
-        $tempFilePath = Join-Path -Path $outputFolder -ChildPath "temp.xlsx"
+        $tempFilePath = Join-Path -Path (Split-Path -Path $filePath -Parent) -ChildPath ((Split-Path -Path $filePath -LeafBaseName) + "_副本" + (Split-Path -Path $filePath -Extension))
         Copy-Item -Path $filePath -Destination $tempFilePath -Force
 
         # エクセルファイルをインポート
+        $excel = $null
+        $workbook = $null
         try {
             $excel = New-Object -ComObject Excel.Application
             $workbook = $excel.Workbooks.Open($tempFilePath)
@@ -71,19 +70,21 @@ function Import-ExcelFile {
             # タイムスタンプを保存
             $excelLastWriteTime.ToString() | Out-File -FilePath $timestampFilePath -Encoding UTF8
 
-            # クリーンアップ
-            $workbook.Close($false)
-            $excel.Quit()
-            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($sheet) | Out-Null
-            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook) | Out-Null
-            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
-            [GC]::Collect()
-            [GC]::WaitForPendingFinalizers()
-
-            # 副本を削除
-            Remove-Item -Path $tempFilePath -Force
         } catch {
             Write-Error "エクセルファイルのインポート中にエラーが発生しました: $_"
+        } finally {
+            # クリーンアップ
+            if ($null -ne $workbook) {
+                $workbook.Close($false)
+            }
+            if ($null -ne $excel) {
+                $excel.Quit()
+                [System.Runtime.Interopservices.Marshal]::ReleaseComObject($sheet) | Out-Null
+                [System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook) | Out-Null
+                [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
+                [GC]::Collect()
+                [GC]::WaitForPendingFinalizers()
+            }
         }
     } else {
         Write-Output "エクセルファイルに変更がないため、CSVファイルは更新されませんでした。"
