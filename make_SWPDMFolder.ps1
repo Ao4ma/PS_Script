@@ -1,5 +1,5 @@
 param (
-    [string]$defaultFilePath = "S:\\技術部storage\\管理課\\PDM復旧\\ファイル.xlsx",
+    [string]$defaultFilePath = "S:\\技術部storage\\管理課\\PDM復旧\\ファイル1.xlsx",
     [string]$homeFolder = "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script"
 )
 
@@ -19,9 +19,6 @@ function Import-ExcelFile {
         New-Item -ItemType Directory -Path $outputFolder | Out-Null
     }
 
-    # 出力フォルダ内の既存CSVファイルを削除
-    Get-ChildItem -Path $outputFolder -Filter *.csv | Remove-Item -Force
-
     # エクセルファイルの更新日時を取得
     $excelLastWriteTime = (Get-Item $filePath).LastWriteTime
     $timestampFilePath = Join-Path -Path $outputFolder -ChildPath "timestamp.txt"
@@ -35,10 +32,17 @@ function Import-ExcelFile {
     }
 
     if ($shouldProcess) {
+        # 出力フォルダ内の既存CSVファイルを削除
+        Get-ChildItem -Path $outputFolder -Filter *.csv | Remove-Item -Force
+
+        # エクセルファイルの副本を作成
+        $tempFilePath = Join-Path -Path $outputFolder -ChildPath "temp.xlsx"
+        Copy-Item -Path $filePath -Destination $tempFilePath -Force
+
         # エクセルファイルをインポート
         try {
             $excel = New-Object -ComObject Excel.Application
-            $workbook = $excel.Workbooks.Open($filePath)
+            $workbook = $excel.Workbooks.Open($tempFilePath)
             $sheet = $workbook.Sheets.Item(1)
             $usedRange = $sheet.UsedRange
             $rowCount = $usedRange.Rows.Count
@@ -47,7 +51,7 @@ function Import-ExcelFile {
 
             for ($startRow = 1; $startRow -le $rowCount; $startRow += $batchSize) {
                 $endRow = [math]::Min($startRow + $batchSize - 1, $rowCount)
-                $csvFileName = "{0}_{1:D4}.csv" -f (Split-Path -Path $filePath -Leaf), $batchNumber
+                $csvFileName = "{0}_{1:D4}.csv" -f (Split-Path -Path $filePath -LeafBaseName), $batchNumber
                 $csvFilePath = Join-Path -Path $outputFolder -ChildPath $csvFileName
 
                 $csvContent = @()
@@ -75,6 +79,9 @@ function Import-ExcelFile {
             [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
             [GC]::Collect()
             [GC]::WaitForPendingFinalizers()
+
+            # 副本を削除
+            Remove-Item -Path $tempFilePath -Force
         } catch {
             Write-Error "エクセルファイルのインポート中にエラーが発生しました: $_"
         }
