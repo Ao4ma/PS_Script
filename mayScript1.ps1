@@ -1,11 +1,11 @@
 # モジュールのインポート
-Import-Module -Name "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psd1"
+Import-Module -Name "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1"
 
 # 新しいクラスの定義
 class MainClass {
     [void] ProcessExcelFile([string]$filePath, [int]$batchSize) {
-        $processor = [ExcelProcessor.ExcelProcessor]::new($filePath,$batchSize)
-        $processor.ImportExcelFile()
+        $processor = [ExcelProcessor]::new($filePath)
+        $processor.ImportExcelFile($batchSize)
     }
 }
 

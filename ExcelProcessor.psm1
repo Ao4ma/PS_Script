@@ -1,17 +1,13 @@
-# ExcelProcessor.psm1
-
 class ExcelProcessor {
     [string]$FilePath
     [string]$OutputFolder
     [string]$TimestampFilePath
     [int]$MinRowsForCsv = 100
-    [int]$BatchSize
     [System.Collections.ArrayList]$CsvFiles = @()
 
     # コンストラクタ
-    ExcelProcessor([string]$filePath, [int]$batchSize = 5000) {
+    ExcelProcessor([string]$filePath) {
         $this.FilePath = $filePath
-        $this.BatchSize = $batchSize
         $this.OutputFolder = Join-Path -Path (Split-Path -Path $filePath -Parent) -ChildPath ([System.IO.Path]::GetFileNameWithoutExtension($filePath))
         $this.TimestampFilePath = Join-Path -Path $this.OutputFolder -ChildPath "timestamp.txt"
     }
@@ -48,107 +44,110 @@ class ExcelProcessor {
     }
 
     # エクセルファイルをインポート
-    [void] ImportExcelFile() {
-        if (-Not (Test-Path -Path $this.FilePath)) {
-            Write-Error "エクセルファイルが見つかりません: $this.FilePath"
-            return
-        }
-
-        $this.EnsureOutputFolderExists()
-        $this.RemoveExistingCsvFiles()
-
-        if ($this.ShouldProcessFile()) {
-            $fileNameWithoutExtension = [System.IO.Path]::GetFileNameWithoutExtension($this.FilePath)
-            $fileExtension = [System.IO.Path]::GetExtension($this.FilePath)
-            $tempFilePath = Join-Path -Path (Split-Path -Path $this.FilePath -Parent) -ChildPath ($fileNameWithoutExtension + "_副本" + $fileExtension)
-            Copy-Item -Path $this.FilePath -Destination $tempFilePath -Force
-
-            $excel = $null
-            $workbook = $null
-            $sheet = $null
-            try {
-                $excel = New-Object -ComObject Excel.Application
-                $workbook = $excel.Workbooks.Open($tempFilePath)
-                $sheet = $workbook.Sheets.Item(1)
-                $usedRange = $sheet.UsedRange
-                $rowCount = $usedRange.Rows.Count
-                $rowCountWithoutTitle = $rowCount - 1
-
-                $titleRow = @()
-                $columnCount = $sheet.UsedRange.Columns.Count
-                for ($col = 1; $col -le $columnCount; $col++) {
-                    $cell = $sheet.Cells.Item(1, $col)
-                    $titleRow += $cell.Text
-                }
-
-                $this.CsvFiles = @()
-
-                if ($this.BatchSize -eq 0) {
-                    $this.BatchSize = $rowCountWithoutTitle
-                }
-
-                $emptyRowCount = 0
-                $maxEmptyRows = 10  # 連続する空行の最大数
-
-                for ($startRow = 2; $startRow -le $rowCount; $startRow += $this.BatchSize) {
-                    $endRow = [math]::Min($startRow + $this.BatchSize - 1, $rowCount)
-                    $batchNumber = [math]::Ceiling(($startRow - 1) / $this.BatchSize)
-                    $csvFileName = "{0}_{1:D4}.csv" -f $fileNameWithoutExtension, [int]$batchNumber
-                    $csvFilePath = Join-Path -Path $this.OutputFolder -ChildPath $csvFileName
-
-                    $csvContent = @()
-                    $csvContent += ($titleRow -join ',')
-
-                    $hasData = $false
-
-                    for ($row = $startRow; $row -le $endRow; $row++) {
-                        $rowData = @()
-                        for ($col = 1; $col -le $columnCount; $col++) {
-                            $cell = $sheet.Cells.Item($row, $col)
-                            $rowData += $cell.Text
-                        }
-
-                        # 行データがすべて空であるかをチェック
-                        if ($rowData -join '' -eq '') {
-                            $emptyRowCount++
-                            if ($emptyRowCount -ge $maxEmptyRows) {
-                                Write-Host "連続する空行が $maxEmptyRows 行に達したため、処理を終了します。"
-                                break
-                            }
-                            continue
-                        } else {
-                            $emptyRowCount = 0
-                            $hasData = $true
-                        }
-
-                        $csvContent += ($rowData -join ',')
-                    }
-
-                    if ($hasData) {
-                        # CSVファイルを出力
-                        $csvContent | Out-File -FilePath $csvFilePath -Encoding UTF8
-                        Write-Host "CSVファイルが作成されました: $csvFilePath"
-                        $this.CsvFiles += [PSCustomObject]@{ FileName = $csvFileName; FilePath = $csvFilePath }
-                    } else {
-                        Write-Host "CSVファイルにデータがないため、作成されませんでした: $csvFilePath"
-                    }
-
-                    if ($emptyRowCount -ge $maxEmptyRows) {
-                        break
-                    }
-                }
-
-                # タイムスタンプを保存
-                $this.SaveTimestamp()
-
-            } finally {
-                if ($null -ne $workbook) { $workbook.Close($false) }
-                if ($null -ne $excel) { $excel.Quit() }
-                [System.Runtime.Interopservices.Marshal]::ReleaseComObject($sheet) | Out-Null
-                [System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook) | Out-Null
-                [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
-                Remove-Item -Path $tempFilePath -Force
+    [void] ImportExcelFile([int]$batchSize) {
+        try {
+            if (-Not (Test-Path -Path $this.FilePath)) {
+                throw [System.IO.FileNotFoundException] "エクセルファイルが見つかりません: $this.FilePath"
             }
+
+            $this.EnsureOutputFolderExists()
+            $this.RemoveExistingCsvFiles()
+
+            if ($this.ShouldProcessFile()) {
+                $fileNameWithoutExtension = [System.IO.Path]::GetFileNameWithoutExtension($this.FilePath)
+                $fileExtension = [System.IO.Path]::GetExtension($this.FilePath)
+                $tempFilePath = Join-Path -Path (Split-Path -Path $this.FilePath -Parent) -ChildPath ($fileNameWithoutExtension + "_副本" + $fileExtension)
+                Copy-Item -Path $this.FilePath -Destination $tempFilePath -Force
+
+                $excel = $null
+                $workbook = $null
+                $sheet = $null
+                try {
+                    $excel = New-Object -ComObject Excel.Application
+                    $workbook = $excel.Workbooks.Open($tempFilePath)
+                    $sheet = $workbook.Sheets.Item(1)
+                    $usedRange = $sheet.UsedRange
+                    $rowCount = $usedRange.Rows.Count
+                    $rowCountWithoutTitle = $rowCount - 1
+
+                    $titleRow = @()
+                    $columnCount = $sheet.UsedRange.Columns.Count
+                    for ($col = 1; $col -le $columnCount; $col++) {
+                        $cell = $sheet.Cells.Item(1, $col)
+                        $titleRow += $cell.Text
+                    }
+
+                    $this.CsvFiles = @()
+
+                    if ($batchSize -eq 0) {
+                        $batchSize = $rowCountWithoutTitle
+                    }
+
+                    $emptyRowCount = 0
+                    $maxEmptyRows = 10  # 連続する空行の最大数
+
+                    for ($startRow = 2; $startRow -le $rowCount; $startRow += $batchSize) {
+                        $endRow = [math]::Min($startRow + $batchSize - 1, $rowCount)
+                        $batchNumber = [math]::Ceiling(($startRow - 1) / $batchSize)
+                        $csvFileName = "{0}_{1:D4}.csv" -f $fileNameWithoutExtension, [int]$batchNumber
+                        $csvFilePath = Join-Path -Path $this.OutputFolder -ChildPath $csvFileName
+
+                        $csvContent = @()
+                        $csvContent += ($titleRow -join ',')
+
+                        $hasData = $false
+
+                        for ($row = $startRow; $row -le $endRow; $row++) {
+                            $rowData = @()
+                            for ($col = 1; $col -le $columnCount; $col++) {
+                                $cell = $sheet.Cells.Item($row, $col)
+                                $rowData += $cell.Text
+                            }
+
+                            # 行データがすべて空であるかをチェック
+                            if ($rowData -join '' -eq '') {
+                                $emptyRowCount++
+                                if ($emptyRowCount -ge $maxEmptyRows) {
+                                    Write-Host "連続する空行が $maxEmptyRows 行に達したため、処理を終了します。"
+                                    break
+                                }
+                                continue
+                            } else {
+                                $emptyRowCount = 0
+                                $hasData = $true
+                            }
+
+                            $csvContent += ($rowData -join ',')
+                        }
+
+                        if ($hasData) {
+                            # CSVファイルを出力
+                            $csvContent | Out-File -FilePath $csvFilePath -Encoding UTF8
+                            Write-Host "CSVファイルが作成されました: $csvFilePath"
+                            $this.CsvFiles += [PSCustomObject]@{ FileName = $csvFileName; FilePath = $csvFilePath }
+                        } else {
+                            Write-Host "CSVファイルにデータがないため、作成されませんでした: $csvFilePath"
+                        }
+
+                        if ($emptyRowCount -ge $maxEmptyRows) {
+                            break
+                        }
+                    }
+
+                    # タイムスタンプを保存
+                    $this.SaveTimestamp()
+
+                } finally {
+                    if ($null -ne $workbook) { $workbook.Close($false) }
+                    if ($null -ne $excel) { $excel.Quit() }
+                    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($sheet) | Out-Null
+                    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($workbook) | Out-Null
+                    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($excel) | Out-Null
+                    Remove-Item -Path $tempFilePath -Force
+                }
+            }
+        } catch {
+            Write-Error "エラーが発生しました: $_"
         }
     }
 }
