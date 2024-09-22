@@ -24,7 +24,7 @@ class FileManager {
         }
     }
 
-    [void] CopyFilesBasedOnCsv([string]$csvFilePath, [string]$workFolder, [string]$dataFolder) {
+    [void] CopyFilesBasedOnCsv([string]$csvFilePath, [string]$workFolder, [string]$dataFolder, [string]$realDataFolder) {
         $csvData = Import-Csv -Path $csvFilePath
 
         foreach ($record in $csvData) {
@@ -35,15 +35,13 @@ class FileManager {
             $fullPath = $record.フルパス
 
             # SWPDMがつくフォルダを探す
-            $swpdmFolder = Get-ChildItem -Path $workFolder -Directory -Filter "SWPDM*" | Where-Object { $_.Name -like "*$pcName*" }
+            $swpdmFolder = Get-ChildItem -Path $realDataFolder -Directory -Filter "SWPDM*" | Where-Object { $_.Name -like "*$pcName*" }
 
             if ($swpdmFolder) {
-                # ファイルを検索する
-                $fileToCopy = Get-ChildItem -Path $swpdmFolder.FullName -Recurse -Filter "$fileName.$fileExtension" | Where-Object {
-                    $_.FullName -like "*$fullPath"
-                } | Select-Object -First 1
+                $swpdmFolderPath = $swpdmFolder.FullName
+                $newFullPath = $fullPath -replace "^C:\\SWPDM", $swpdmFolderPath
 
-                if ($fileToCopy) {
+                if (Test-Path -Path $newFullPath) {
                     # コピー先フォルダを作成
                     $destinationFolder = Join-Path -Path $dataFolder -ChildPath $index
                     if (-Not (Test-Path -Path $destinationFolder)) {
@@ -51,7 +49,7 @@ class FileManager {
                     }
 
                     # フォルダ構成を維持してファイルをコピー
-                    $relativePath = $fileToCopy.FullName.Substring($swpdmFolder.FullName.Length)
+                    $relativePath = $newFullPath.Substring($swpdmFolderPath.Length)
                     $destinationPath = Join-Path -Path $destinationFolder -ChildPath $relativePath
                     $destinationDir = Split-Path -Path $destinationPath -Parent
 
@@ -59,7 +57,38 @@ class FileManager {
                         New-Item -Path $destinationDir -ItemType Directory -Force
                     }
 
-                    Copy-Item -Path $fileToCopy.FullName -Destination $destinationPath -Force
+                    Copy-Item -Path $newFullPath -Destination $destinationPath -Force
+                } else {
+                    # エラーログに記録
+                    $errorFile = Join-Path -Path $workFolder -ChildPath "error.log"
+                    Add-Content -Path $errorFile -Value "File not found: $newFullPath"
+
+                    # ファイルを再帰的にサーチ
+                    $fileToCopy = Get-ChildItem -Path $swpdmFolderPath -Recurse -Filter "$fileName.$fileExtension" | Where-Object {
+                        $_.FullName -like "*$fullPath"
+                    } | Select-Object -First 1
+
+                    if ($fileToCopy) {
+                        # コピー先フォルダを作成
+                        $destinationFolder = Join-Path -Path $dataFolder -ChildPath $index
+                        if (-Not (Test-Path -Path $destinationFolder)) {
+                            New-Item -Path $destinationFolder -ItemType Directory
+                        }
+
+                        # フォルダ構成を維持してファイルをコピー
+                        $relativePath = $fileToCopy.FullName.Substring($swpdmFolderPath.Length)
+                        $destinationPath = Join-Path -Path $destinationFolder -ChildPath $relativePath
+                        $destinationDir = Split-Path -Path $destinationPath -Parent
+
+                        if (-Not (Test-Path -Path $destinationDir)) {
+                            New-Item -Path $destinationDir -ItemType Directory -Force
+                        }
+
+                        Copy-Item -Path $fileToCopy.FullName -Destination $destinationPath -Force
+                    } else {
+                        # エラーログに記録
+                        Add-Content -Path $errorFile -Value "File not found after search: $fileName.$fileExtension in $swpdmFolderPath"
+                    }
                 }
             }
         }
@@ -72,6 +101,7 @@ function Main {
         [string]$excelFilePath,
         [string]$workFolder,
         [string]$dataFolder,
+        [string]$realDataFolder,
         [int]$batchSize
     )
 
@@ -88,7 +118,7 @@ function Main {
 
     # CSVファイルに基づいてファイルをコピー
     foreach ($csvFilePath in $csvFilePaths) {
-        $fileManager.CopyFilesBasedOnCsv($csvFilePath, $workFolder, $dataFolder)
+        $fileManager.CopyFilesBasedOnCsv($csvFilePath, $workFolder, $dataFolder, $realDataFolder)
     }
 }
 
@@ -98,6 +128,9 @@ $workFolder = "S:\\技術部storage\\管理課\\PDM復旧"
 # データ保存フォルダ
 $dataFolder = Join-Path -Path $workFolder -ChildPath "SWPDM復旧データ"
 
+# 実データフォルダ
+$realDataFolder = Join-Path -Path $workFolder -ChildPath "実データ"
+
 # 処理するExcelファイルのパス
 $excelFileName = "ファイル1.xlsx"
 $excelFilePath = Join-Path -Path $workFolder -ChildPath $excelFileName
@@ -106,7 +139,7 @@ $excelFilePath = Join-Path -Path $workFolder -ChildPath $excelFileName
 $batchSize = 100
 
 # メイン処理の呼び出し
-Main -excelFilePath $excelFilePath -workFolder $workFolder -dataFolder $dataFolder -batchSize $batchSize
+Main -excelFilePath $excelFilePath -workFolder $workFolder -dataFolder $dataFolder -realDataFolder $realDataFolder -batchSize $batchSize
 
 # エラー処理
 trap {
