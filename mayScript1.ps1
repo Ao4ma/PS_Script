@@ -48,6 +48,15 @@ class FileManager {
                         New-Item -Path $destinationFolder -ItemType Directory
                     }
 
+                    # SWPDMフォルダを作成
+                    $swpdmDestinationFolder = Join-Path -Path $destinationFolder -ChildPath "SWPDM"
+                    if (-Not (Test-Path -Path $swpdmDestinationFolder)) {
+                        New-Item -Path $swpdmDestinationFolder -ItemType Directory
+                    }
+
+                    # destinationFolderをSWPDMフォルダに設定
+                    $destinationFolder = $swpdmDestinationFolder
+
                     # フォルダ構成を維持してファイルをコピー
                     $relativePath = $newFullPath.Substring($swpdmFolderPath.Length)
                     $destinationPath = Join-Path -Path $destinationFolder -ChildPath $relativePath
@@ -74,6 +83,15 @@ class FileManager {
                         if (-Not (Test-Path -Path $destinationFolder)) {
                             New-Item -Path $destinationFolder -ItemType Directory
                         }
+
+                        # SWPDMフォルダを作成
+                        $swpdmDestinationFolder = Join-Path -Path $destinationFolder -ChildPath "SWPDM"
+                        if (-Not (Test-Path -Path $swpdmDestinationFolder)) {
+                            New-Item -Path $swpdmDestinationFolder -ItemType Directory
+                        }
+
+                        # destinationFolderをSWPDMフォルダに設定
+                        $destinationFolder = $swpdmDestinationFolder
 
                         # フォルダ構成を維持してファイルをコピー
                         $relativePath = $fileToCopy.FullName.Substring($swpdmFolderPath.Length)
