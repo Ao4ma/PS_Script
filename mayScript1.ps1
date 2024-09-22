@@ -11,4 +11,4 @@ class MainClass {
 
 # インスタンスの作成とメソッドの呼び出し
 $main = [MainClass]::new()
-$main.ProcessExcelFile("S:\\技術部storage\\管理課\\PDM復旧\\ファイル1.xlsx", 100)
+$main.ProcessExcelFile("S:\\技術部storage\\管理課\\PDM復旧\\ファイル1.xlsx", 1000)
