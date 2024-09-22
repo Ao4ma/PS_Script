@@ -3,10 +3,14 @@ Import-Module -Name "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProces
 
 # Excelファイルを処理するクラスの定義
 class ExcelHandler {
-    [string] ProcessExcelFile([string]$filePath, [int]$batchSize) {
+    [System.Collections.Generic.List[string]] ProcessExcelFile([string]$filePath, [int]$batchSize) {
         $processor = [ExcelProcessor]::new($filePath)
         $processor.ImportExcelFile($batchSize)
-        return $processor.OutputCsvFilePath  # 生成されたCSVファイルのパスを返す
+
+        # CSVファイルが置かれているフォルダをサーチしてCSVファイルのパスを取得
+        $csvFolder = $processor.OutputFolder
+        $csvFiles = Get-ChildItem -Path $csvFolder -Filter *.csv | Select-Object -ExpandProperty FullName
+        return $csvFiles
     }
 }
 
@@ -77,10 +81,15 @@ function Main {
 
     # Excelファイルを処理
     $excelHandler = [ExcelHandler]::new()
-    $csvFilePath = $excelHandler.ProcessExcelFile($excelFilePath, $batchSize)
+    $csvFilePaths = $excelHandler.ProcessExcelFile($excelFilePath, $batchSize)
+    if ($csvFilePaths.Count -eq 0) {
+        throw "CSV file paths are empty. Please check the Excel processing."
+    }
 
     # CSVファイルに基づいてファイルをコピー
-    $fileManager.CopyFilesBasedOnCsv($csvFilePath, $workFolder, $dataFolder)
+    foreach ($csvFilePath in $csvFilePaths) {
+        $fileManager.CopyFilesBasedOnCsv($csvFilePath, $workFolder, $dataFolder)
+    }
 }
 
 # ワーク場所のトップフォルダ
