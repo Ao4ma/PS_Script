@@ -43,10 +43,10 @@ class FileManager {
 
         foreach ($record in $csvData) {
             $pcName = $record.PC名
-            $fileName = Escape-SpecialCharacters $record.ファイル名
-            $fileExtension = Escape-SpecialCharacters $record.拡張子名
+            $fileName = Convert-SpecialCharacters $record.ファイル名
+            $fileExtension = Convert-SpecialCharacters $record.拡張子名
             $index = $record.インデックス
-            $fullPath = Escape-SpecialCharacters $record.フルパス
+            $fullPath = Convert-SpecialCharacters $record.フルパス
 
             # SWPDMがつくフォルダを探す
             $swpdmFolder = Get-ChildItem -Path $realDataFolder -Directory -Filter "SWPDM*" | Where-Object { $_.Name -like "*$pcName*" }
