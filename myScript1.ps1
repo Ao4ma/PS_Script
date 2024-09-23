@@ -2,11 +2,13 @@
 Import-Module -Name "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1" -ErrorAction Stop
 
 # 特殊文字をエスケープする関数
-function Escape-SpecialCharacters {
+function Convert-SpecialCharacters {
     param (
-        [string]$input
+        [string]$userInput
     )
-    $escapedInput = $input -replace '([\\\*\?\|\<\>\:\"]|\[|\])', '\\$1'
+    Write-Host "Original input: $userInput"
+    $escapedInput = $userInput -replace '([\\\*\?\|\<\>\:\"]|\[|\])', '\\$1'
+    Write-Host "Escaped input: $escapedInput"
     return $escapedInput
 }
 
