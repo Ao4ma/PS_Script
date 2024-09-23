@@ -1,6 +1,6 @@
 param (
     [switch]$debug,
-    [switch]$SkipConverted = $true,
+    [switch]$SkipConverted,
     [switch]$Reset,
     [switch]$ShowDialog
 )
