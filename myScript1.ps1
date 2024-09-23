@@ -2,9 +2,9 @@
 using module "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1"
 Import-Module -Name "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1" -ErrorAction Stop
 
-# Verify if the type [ExcelProcessor.ExcelProcessor] is available
-if (-Not ([type]::GetType("ExcelProcessor.ExcelProcessor"))) {
-    throw "Unable to find type [ExcelProcessor.ExcelProcessor]. Please check the module path and type name."
+# Verify if the type [ExcelProcessor] is available
+if (-Not ([type]::GetType("ExcelProcessor"))) {
+    throw "Unable to find type [ExcelProcessor]. Please check the module path and type name."
 }
 
 # 特殊文字をエスケープする関数
@@ -19,12 +19,9 @@ function Convert-SpecialCharacters {
 # Excelファイルを処理するクラスの定義
 class ExcelHandler {
     [System.Collections.Generic.List[string]] ProcessExcelFile([string]$filePath, [int]$batchSize) {
-        $processor = [ExcelProcessor.ExcelProcessor]::new($filePath)
+        $processor = [ExcelProcessor]::new($filePath)
         if (-Not $processor) {
-            throw "Unable to instantiate [ExcelProcessor.ExcelProcessor]. Please check the module and type definition."
-        }
-        if (-Not $processor) {
-            throw "Unable to instantiate [ExcelProcessor.ExcelProcessor]. Please check the module and type definition."
+            throw "Unable to instantiate [ExcelProcessor]. Please check the module and type definition."
         }
         $processor.ImportExcelFile($batchSize)
 
@@ -50,10 +47,10 @@ class FileManager {
 
         foreach ($record in $csvData) {
             $pcName = $record.PC名
-            $fileName = Escape-SpecialCharacters $record.ファイル名
-            $fileExtension = Escape-SpecialCharacters $record.拡張子名
+            $fileName = Convert-SpecialCharacters $record.ファイル名
+            $fileExtension = Convert-SpecialCharacters $record.拡張子名
             $index = $record.インデックス
-            $fullPath = Escape-SpecialCharacters $record.フルパス
+            $fullPath = Convert-SpecialCharacters $record.フルパス
 
             # SWPDMがつくフォルダを探す
             $swpdmFolder = Get-ChildItem -Path $realDataFolder -Directory -Filter "SWPDM*" | Where-Object { $_.Name -like "*$pcName*" }
