@@ -159,11 +159,11 @@ $dataFolder = Join-Path -Path $workFolder -ChildPath "SWPDM復旧データ"
 $realDataFolder = Join-Path -Path $workFolder -ChildPath "実データ"
 
 # 処理するExcelファイルのパス
-$excelFileName = "ファイル.xlsx"
+$excelFileName = "ファイル1.xlsx"
 $excelFilePath = Join-Path -Path $workFolder -ChildPath $excelFileName
 
 # バッチサイズ
-$batchSize = 5000
+$batchSize = 100
 
 # メイン処理の呼び出し
 Main -excelFilePath $excelFilePath -workFolder $workFolder -dataFolder $dataFolder -realDataFolder $realDataFolder -batchSize $batchSize
