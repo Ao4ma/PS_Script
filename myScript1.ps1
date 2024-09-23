@@ -8,7 +8,7 @@ function Convert-SpecialCharacters {
     )
     Write-Host "Original input: $userInput"
 #   $escapedInput = $userInput -replace '([\\\*\?\|\<\>\:\"]|\[|\])', '\\$1'
-    $escapedInput = $userInput -replace '(\[|\])', '\\$1'
+    $escapedInput = $userInput -replace '([\\\*\?\|\<\>\:\"]|\[|\])', '`$1'
     Write-Host "Escaped input: $escapedInput"
     return $escapedInput
 }
