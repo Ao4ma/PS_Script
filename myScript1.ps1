@@ -1,18 +1,12 @@
 # モジュールのインポート
-using module "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1"
 Import-Module -Name "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1" -ErrorAction Stop
 
-# Verify if the type [ExcelProcessor] is available
-if (-Not ([type]::GetType("ExcelProcessor"))) {
-    throw "Unable to find type [ExcelProcessor]. Please check the module path and type name."
-}
-
 # 特殊文字をエスケープする関数
-function Convert-SpecialCharacters {
+function Escape-SpecialCharacters {
     param (
-        [string]$inputString
+        [string]$input
     )
-    $escapedInput = $inputString -replace '([\\\*\?\|\<\>\:\"]|\[|\])', '\\$1'
+    $escapedInput = $input -replace '([\\\*\?\|\<\>\:\"]|\[|\])', '\\$1'
     return $escapedInput
 }
 
@@ -47,10 +41,10 @@ class FileManager {
 
         foreach ($record in $csvData) {
             $pcName = $record.PC名
-            $fileName = Convert-SpecialCharacters $record.ファイル名
-            $fileExtension = Convert-SpecialCharacters $record.拡張子名
+            $fileName = Escape-SpecialCharacters $record.ファイル名
+            $fileExtension = Escape-SpecialCharacters $record.拡張子名
             $index = $record.インデックス
-            $fullPath = Convert-SpecialCharacters $record.フルパス
+            $fullPath = Escape-SpecialCharacters $record.フルパス
 
             # SWPDMがつくフォルダを探す
             $swpdmFolder = Get-ChildItem -Path $realDataFolder -Directory -Filter "SWPDM*" | Where-Object { $_.Name -like "*$pcName*" }
