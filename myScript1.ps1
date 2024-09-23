@@ -6,11 +6,7 @@ function Convert-SpecialCharacters {
     param (
         [string]$userInput
     )
-    Write-Host "Original input: $userInput"
-#   $escapedInput = $userInput -replace '([\\\*\?\|\<\>\:\"]|\[|\])', '\\$1'
-#   $escapedInput = $userInput -replace '([\\\*\?\|\<\>\:\"]|\[|\])', '`$1'
     $escapedInput = $userInput -replace '(\[|\])', '`$1'
-Write-Host "Escaped input: $escapedInput"
     return $escapedInput
 }
 
@@ -40,10 +36,15 @@ class FileManager {
         }
     }
 
-    [void] CopyFilesBasedOnCsv([string]$csvFilePath, [string]$workFolder, [string]$dataFolder, [string]$realDataFolder) {
+    [void] CopyFilesBasedOnCsv([string]$csvFilePath, [string]$workFolder, [string]$dataFolder, [string]$realDataFolder, [ref]$successCount, [ref]$failureCount) {
         $csvData = Import-Csv -Path $csvFilePath
+        $retryCsvPath = Join-Path -Path $workFolder -ChildPath "retry.csv"
 
+        $recordNumber = 0
         foreach ($record in $csvData) {
+            $recordNumber++
+            Write-Host "Processing CSV File: $csvFilePath, Record Number: $recordNumber"
+
             $pcName = $record.PC名
             $fileName = Convert-SpecialCharacters $record.ファイル名
             $fileExtension = Convert-SpecialCharacters $record.拡張子名
@@ -58,101 +59,99 @@ class FileManager {
                 $newFullPath = $fullPath -replace "^C:\\SWPDM", $swpdmFolderPath
 
                 if (Test-Path -Path $newFullPath) {
-                    # コピー先フォルダを作成
-                    $destinationFolder = Join-Path -Path $dataFolder -ChildPath $index
-                    if (-Not (Test-Path -Path $destinationFolder)) {
-                        New-Item -Path $destinationFolder -ItemType Directory
-                    }
-
-                    # SWPDMフォルダを作成
-                    $swpdmDestinationFolder = Join-Path -Path $destinationFolder -ChildPath "SWPDM"
-                    if (-Not (Test-Path -Path $swpdmDestinationFolder)) {
-                        New-Item -Path $swpdmDestinationFolder -ItemType Directory
-                    }
-
-                    # destinationFolderをSWPDMフォルダに設定
-                    $destinationFolder = $swpdmDestinationFolder
-
-                    # フォルダ構成を維持してファイルをコピー
-                    $relativePath = $newFullPath.Substring($swpdmFolderPath.Length)
-                    $destinationPath = Join-Path -Path $destinationFolder -ChildPath $relativePath
-                    $destinationDir = Split-Path -Path $destinationPath -Parent
-
-                    if (-Not (Test-Path -Path $destinationDir)) {
-                        New-Item -Path $destinationDir -ItemType Directory -Force
-                    }
-
-                    Copy-Item -Path $newFullPath -Destination $destinationPath -Force
+                    $this.CopyFile($newFullPath, $dataFolder, $index, $swpdmFolderPath, $workFolder, $record, $successCount, $failureCount)
                 } else {
-                    # エラーログに記録
-                    $errorFile = Join-Path -Path $workFolder -ChildPath "error.log"
-                    Add-Content -Path $errorFile -Value "File not found: $newFullPath"
-
-                    # ファイルを再帰的にサーチ
-                    $fileToCopy = Get-ChildItem -Path $swpdmFolderPath -Recurse -Filter "$fileName.$fileExtension" | Where-Object {
-                        $_.FullName -like "*$fullPath"
-                    } | Select-Object -First 1
-
-                    if ($fileToCopy) {
-                        # コピー先フォルダを作成
-                        $destinationFolder = Join-Path -Path $dataFolder -ChildPath $index
-                        if (-Not (Test-Path -Path $destinationFolder)) {
-                            New-Item -Path $destinationFolder -ItemType Directory
-                        }
-
-                        # SWPDMフォルダを作成
-                        $swpdmDestinationFolder = Join-Path -Path $destinationFolder -ChildPath "SWPDM"
-                        if (-Not (Test-Path -Path $swpdmDestinationFolder)) {
-                            New-Item -Path $swpdmDestinationFolder -ItemType Directory
-                        }
-
-                        # destinationFolderをSWPDMフォルダに設定
-                        $destinationFolder = $swpdmDestinationFolder
-
-                        # フォルダ構成を維持してファイルをコピー
-                        $relativePath = $fileToCopy.FullName.Substring($swpdmFolderPath.Length)
-                        $destinationPath = Join-Path -Path $destinationFolder -ChildPath $relativePath
-                        $destinationDir = Split-Path -Path $destinationPath -Parent
-
-                        if (-Not (Test-Path -Path $destinationDir)) {
-                            New-Item -Path $destinationDir -ItemType Directory -Force
-                        }
-
-                        Copy-Item -Path $fileToCopy.FullName -Destination $destinationPath -Force
-                    } else {
-                        # エラーログに記録
-                        Add-Content -Path $errorFile -Value "File not found after search: $fileName.$fileExtension in $swpdmFolderPath"
-                    }
+                    $this.HandleFileNotFound($newFullPath, $workFolder, $record, $retryCsvPath, $swpdmFolderPath, $fileName, $fileExtension, $dataFolder, $index, $successCount, $failureCount)
                 }
+            } else {
+                $this.LogError($workFolder, "SWPDM folder not found for PC: $pcName, File: $fileName.$fileExtension, Full Path: $fullPath, Record: $($record | ConvertTo-Json -Compress)")
+                $record | Export-Csv -Path $retryCsvPath -Append -NoTypeInformation
+                $failureCount.Value++
             }
         }
     }
-}
 
-# メイン処理
-function Main {
-    param (
-        [string]$excelFilePath,
-        [string]$workFolder,
-        [string]$dataFolder,
-        [string]$realDataFolder,
-        [int]$batchSize
-    )
+    [void] CopyFile([string]$newFullPath, [string]$dataFolder, [string]$index, [string]$swpdmFolderPath, [string]$workFolder, $record, [ref]$successCount, [ref]$failureCount) {
+        $destinationFolder = Join-Path -Path $dataFolder -ChildPath $index
+        if (-Not (Test-Path -Path $destinationFolder)) {
+            New-Item -Path $destinationFolder -ItemType Directory
+        }
 
-    # フォルダが存在しない場合は作成
-    $fileManager = [FileManager]::new()
-    $fileManager.EnsureFolderExists($dataFolder)
+        $swpdmDestinationFolder = Join-Path -Path $destinationFolder -ChildPath "SWPDM"
+        if (-Not (Test-Path -Path $swpdmDestinationFolder)) {
+            New-Item -Path $swpdmDestinationFolder -ItemType Directory
+        }
 
-    # Excelファイルを処理
-    $excelHandler = [ExcelHandler]::new()
-    $csvFilePaths = $excelHandler.ProcessExcelFile($excelFilePath, $batchSize)
-    if ($csvFilePaths.Count -eq 0) {
-        throw "CSV file paths are empty. Please check the Excel processing."
+        $destinationFolder = $swpdmDestinationFolder
+        $relativePath = $newFullPath.Substring($swpdmFolderPath.Length)
+        $destinationPath = Join-Path -Path $destinationFolder -ChildPath $relativePath
+        $destinationDir = Split-Path -Path $destinationPath -Parent
+
+        if (-Not (Test-Path -Path $destinationDir)) {
+            New-Item -Path $destinationDir -ItemType Directory -Force
+        }
+
+        Copy-Item -Path $newFullPath -Destination $destinationPath -Force
+        $successCount.Value++
     }
 
-    # CSVファイルに基づいてファイルをコピー
-    foreach ($csvFilePath in $csvFilePaths) {
-        $fileManager.CopyFilesBasedOnCsv($csvFilePath, $workFolder, $dataFolder, $realDataFolder)
+    [void] HandleFileNotFound([string]$newFullPath, [string]$workFolder, $record, [string]$retryCsvPath, [string]$swpdmFolderPath, [string]$fileName, [string]$fileExtension, [string]$dataFolder, [string]$index, [ref]$successCount, [ref]$failureCount) {
+        $this.LogError($workFolder, "File not found: $newFullPath, Record: $($record | ConvertTo-Json -Compress)")
+        $record | Export-Csv -Path $retryCsvPath -Append -NoTypeInformation
+        $failureCount.Value++
+
+        $fileToCopy = Get-ChildItem -Path $swpdmFolderPath -Recurse -Filter "$fileName.$fileExtension" | Where-Object {
+            $_.FullName -like "*$fullPath"
+        } | Select-Object -First 1
+
+        if ($fileToCopy) {
+            $this.CopyFile($fileToCopy.FullName, $dataFolder, $index, $swpdmFolderPath, $workFolder, $record, $successCount, $failureCount)
+        } else {
+            $this.LogError($workFolder, "File not found after search: $fileName.$fileExtension in $swpdmFolderPath, Record: $($record | ConvertTo-Json -Compress)")
+            $record | Export-Csv -Path $retryCsvPath -Append -NoTypeInformation
+            $failureCount.Value++
+        }
+    }
+
+    [void] LogError([string]$workFolder, [string]$message) {
+        $errorFile = Join-Path -Path $workFolder -ChildPath "error.log"
+        Add-Content -Path $errorFile -Value $message
+    }
+}
+
+# メイン処理を行うクラスの定義
+class MainProcess {
+    [void] Run([string]$excelFilePath, [string]$workFolder, [string]$dataFolder, [string]$realDataFolder, [int]$batchSize) {
+        $fileManager = [FileManager]::new()
+        $fileManager.EnsureFolderExists($dataFolder)
+
+        $logFiles = @("process.log", "error.log", "retry.csv")
+        foreach ($logFile in $logFiles) {
+            $logFilePath = Join-Path -Path $workFolder -ChildPath $logFile
+            if (Test-Path -Path $logFilePath) {
+                Remove-Item -Path $logFilePath -Force
+            }
+        }
+
+        $successCount = [ref]0
+        $failureCount = [ref]0
+
+        $excelHandler = [ExcelHandler]::new()
+        $csvFilePaths = $excelHandler.ProcessExcelFile($excelFilePath, $batchSize)
+        if ($csvFilePaths.Count -eq 0) {
+            throw "CSV file paths are empty. Please check the Excel processing."
+        }
+
+        foreach ($csvFilePath in $csvFilePaths) {
+            $fileManager.CopyFilesBasedOnCsv($csvFilePath, $workFolder, $dataFolder, $realDataFolder, $successCount, $failureCount)
+        }
+
+        $logFile = Join-Path -Path $workFolder -ChildPath "process.log"
+        $logContent = @(
+            "Success Count: $($successCount.Value)",
+            "Failure Count: $($failureCount.Value)"
+        )
+        Add-Content -Path $logFile -Value $logContent
     }
 }
 
@@ -166,14 +165,15 @@ $dataFolder = Join-Path -Path $workFolder -ChildPath "SWPDM復旧データ"
 $realDataFolder = Join-Path -Path $workFolder -ChildPath "実データ"
 
 # 処理するExcelファイルのパス
-$excelFileName = "ファイル1.xlsx"
+$excelFileName = "ファイル.xlsx"
 $excelFilePath = Join-Path -Path $workFolder -ChildPath $excelFileName
 
 # バッチサイズ
-$batchSize = 1000
+$batchSize = 5000
 
 # メイン処理の呼び出し
-Main -excelFilePath $excelFilePath -workFolder $workFolder -dataFolder $dataFolder -realDataFolder $realDataFolder -batchSize $batchSize
+$mainProcess = [MainProcess]::new()
+$mainProcess.Run($excelFilePath, $workFolder, $dataFolder, $realDataFolder, $batchSize)
 
 # エラー処理
 trap {
