@@ -1,9 +1,10 @@
 # モジュールのインポート
+using module "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1"
 Import-Module -Name "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1" -ErrorAction Stop
 
-# Verify if the type [ExcelProcessor] is available
-if (-Not ([type]::GetType("ExcelProcessor"))) {
-    throw "Unable to find type [ExcelProcessor]. Please check the module path and type name."
+# Verify if the type [ExcelProcessor.ExcelProcessor] is available
+if (-Not ([type]::GetType("ExcelProcessor.ExcelProcessor"))) {
+    throw "Unable to find type [ExcelProcessor.ExcelProcessor]. Please check the module path and type name."
 }
 
 # 特殊文字をエスケープする関数
@@ -18,7 +19,13 @@ function Convert-SpecialCharacters {
 # Excelファイルを処理するクラスの定義
 class ExcelHandler {
     [System.Collections.Generic.List[string]] ProcessExcelFile([string]$filePath, [int]$batchSize) {
-        $processor = [ExcelProcessor]::new($filePath)
+        $processor = [ExcelProcessor.ExcelProcessor]::new($filePath)
+        if (-Not $processor) {
+            throw "Unable to instantiate [ExcelProcessor.ExcelProcessor]. Please check the module and type definition."
+        }
+        if (-Not $processor) {
+            throw "Unable to instantiate [ExcelProcessor.ExcelProcessor]. Please check the module and type definition."
+        }
         $processor.ImportExcelFile($batchSize)
 
         # CSVファイルが置かれているフォルダをサーチしてCSVファイルのパスを取得
