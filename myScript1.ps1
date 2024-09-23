@@ -1,12 +1,17 @@
 # モジュールのインポート
-Import-Module -Name "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1"
+Import-Module -Name "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1" -ErrorAction Stop
+
+# Verify if the type [ExcelProcessor] is available
+if (-Not ([type]::GetType("ExcelProcessor"))) {
+    throw "Unable to find type [ExcelProcessor]. Please check the module path and type name."
+}
 
 # 特殊文字をエスケープする関数
-function Escape-SpecialCharacters {
+function Convert-SpecialCharacters {
     param (
-        [string]$input
+        [string]$inputString
     )
-    $escapedInput = $input -replace '([\\\*\?\|\<\>\:\"]|\[|\])', '\\$1'
+    $escapedInput = $inputString -replace '([\\\*\?\|\<\>\:\"]|\[|\])', '\\$1'
     return $escapedInput
 }
 
