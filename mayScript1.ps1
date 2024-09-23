@@ -1,6 +1,15 @@
 # モジュールのインポート
 Import-Module -Name "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1"
 
+# 特殊文字をエスケープする関数
+function Escape-SpecialCharacters {
+    param (
+        [string]$input
+    )
+    $escapedInput = $input -replace '([\\\*\?\|\<\>\:\"]|\[|\])', '\\$1'
+    return $escapedInput
+}
+
 # Excelファイルを処理するクラスの定義
 class ExcelHandler {
     [System.Collections.Generic.List[string]] ProcessExcelFile([string]$filePath, [int]$batchSize) {
@@ -29,10 +38,10 @@ class FileManager {
 
         foreach ($record in $csvData) {
             $pcName = $record.PC名
-            $fileName = $record.ファイル名
-            $fileExtension = $record.拡張子名
+            $fileName = Escape-SpecialCharacters $record.ファイル名
+            $fileExtension = Escape-SpecialCharacters $record.拡張子名
             $index = $record.インデックス
-            $fullPath = $record.フルパス
+            $fullPath = Escape-SpecialCharacters $record.フルパス
 
             # SWPDMがつくフォルダを探す
             $swpdmFolder = Get-ChildItem -Path $realDataFolder -Directory -Filter "SWPDM*" | Where-Object { $_.Name -like "*$pcName*" }
