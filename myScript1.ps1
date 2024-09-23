@@ -163,7 +163,7 @@ $excelFileName = "ファイル1.xlsx"
 $excelFilePath = Join-Path -Path $workFolder -ChildPath $excelFileName
 
 # バッチサイズ
-$batchSize = 100
+$batchSize = 1000
 
 # メイン処理の呼び出し
 Main -excelFilePath $excelFilePath -workFolder $workFolder -dataFolder $dataFolder -realDataFolder $realDataFolder -batchSize $batchSize
