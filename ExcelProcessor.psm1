@@ -151,3 +151,5 @@ class ExcelProcessor {
         }
     }
 }
+
+Export-ModuleMember -Class ExcelProcessor
