@@ -51,7 +51,7 @@ class FileManager {
             $pcName = $record.PC名
             $fileName = Convert-SpecialCharacters $record.ファイル名
             $fileExtension = Convert-SpecialCharacters $record.拡張子名
-            $index = $record.インデックス
+            $dateOrder = $record.日付順位
             $fullPath = Convert-SpecialCharacters $record.フルパス
 
             # SWPDMがつくフォルダを探す
@@ -62,9 +62,9 @@ class FileManager {
                 $newFullPath = $fullPath -replace "^C:\\SWPDM", $swpdmFolderPath
 
                 if (Test-Path -Path $newFullPath) {
-                    $this.CopyFile($newFullPath, $dataFolder, $index, $swpdmFolderPath, $workFolder, $record, $successCount, $failureCount)
+                    $this.CopyFile($newFullPath, $dataFolder, $dateOrder, $swpdmFolderPath, $workFolder, $record, $successCount, $failureCount)
                 } else {
-                    $this.HandleFileNotFound($newFullPath, $workFolder, $record, $retryCsvPath, $swpdmFolderPath, $fileName, $fileExtension, $dataFolder, $index, $successCount, $failureCount)
+                    $this.HandleFileNotFound($newFullPath, $workFolder, $record, $retryCsvPath, $swpdmFolderPath, $fileName, $fileExtension, $dataFolder, $dateOrder, $successCount, $failureCount)
                 }
             } else {
                 $this.LogError($workFolder, "SWPDM folder not found for PC: $pcName, File: $fileName.$fileExtension, Full Path: $fullPath, Record: $($record | ConvertTo-Json -Compress)")
@@ -74,8 +74,8 @@ class FileManager {
         }
     }
 
-    [void] CopyFile([string]$newFullPath, [string]$dataFolder, [string]$index, [string]$swpdmFolderPath, [string]$workFolder, $record, [ref]$successCount, [ref]$failureCount) {
-        $destinationFolder = Join-Path -Path $dataFolder -ChildPath $index
+    [void] CopyFile([string]$newFullPath, [string]$dataFolder, [string]$dateOrder, [string]$swpdmFolderPath, [string]$workFolder, $record, [ref]$successCount, [ref]$failureCount) {
+        $destinationFolder = Join-Path -Path $dataFolder -ChildPath $dateOrder
         if (-Not (Test-Path -Path $destinationFolder)) {
             New-Item -Path $destinationFolder -ItemType Directory
         }
@@ -98,7 +98,7 @@ class FileManager {
         $successCount.Value++
     }
 
-    [void] HandleFileNotFound([string]$newFullPath, [string]$workFolder, $record, [string]$retryCsvPath, [string]$swpdmFolderPath, [string]$fileName, [string]$fileExtension, [string]$dataFolder, [string]$index, [ref]$successCount, [ref]$failureCount) {
+    [void] HandleFileNotFound([string]$newFullPath, [string]$workFolder, $record, [string]$retryCsvPath, [string]$swpdmFolderPath, [string]$fileName, [string]$fileExtension, [string]$dataFolder, [string]$dateOrder, [ref]$successCount, [ref]$failureCount) {
         $this.LogError($workFolder, "File not found: $newFullPath, Record: $($record | ConvertTo-Json -Compress)")
         $record | Export-Csv -Path $retryCsvPath -Append -NoTypeInformation
         $failureCount.Value++
@@ -108,7 +108,7 @@ class FileManager {
         } | Select-Object -First 1
 
         if ($fileToCopy) {
-            $this.CopyFile($fileToCopy.FullName, $dataFolder, $index, $swpdmFolderPath, $workFolder, $record, $successCount, $failureCount)
+            $this.CopyFile($fileToCopy.FullName, $dataFolder, $dateOrder, $swpdmFolderPath, $workFolder, $record, $successCount, $failureCount)
         } else {
             $this.LogError($workFolder, "File not found after search: $fileName.$fileExtension in $swpdmFolderPath, Record: $($record | ConvertTo-Json -Compress)")
             $record | Export-Csv -Path $retryCsvPath -Append -NoTypeInformation
