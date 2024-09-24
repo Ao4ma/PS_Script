@@ -1,3 +1,6 @@
+# Ensure the type is available
+using module "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1"
+
 # モジュールのインポート
 Import-Module -Name "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\ExcelProcessor.psm1" -ErrorAction Stop
 
