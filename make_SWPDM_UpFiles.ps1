@@ -13,7 +13,9 @@ function Convert-SpecialCharacters {
 # Excelファイルを処理するクラスの定義
 class ExcelHandler {
     [System.Collections.Generic.List[string]] ProcessExcelFile([string]$filePath, [int]$batchSize) {
-        $processor = [ExcelProcessor]::new($filePath)
+        $processor = [PSCustomObject]::new()
+        $processor.PSObject.TypeNames.Insert(0, 'ExcelProcessor')
+        $processor.FilePath = $filePath
         if (-Not $processor) {
             throw "Unable to instantiate [ExcelProcessor]. Please check the module and type definition."
         }
