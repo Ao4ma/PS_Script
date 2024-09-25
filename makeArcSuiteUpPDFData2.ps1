@@ -76,6 +76,9 @@ class PC {
 
     # ハッシュテーブルをファイルに保存
     [void]SavePdfPoolHashTable() {
+        if (-not (Test-Path -Path $this.WorkFolder)) {
+            New-Item -Path $this.WorkFolder -ItemType Directory
+        }
         $json = $this.PdfPoolHashTable | ConvertTo-Json
         $json | Out-File -FilePath "$this.WorkFolder\PdfPoolHashTable.json" -Encoding UTF8
     }
@@ -114,7 +117,7 @@ class FileManager {
         $failureCount.Value = 0
         $errorLogPath = Join-Path -Path $pdfFolderPath -ChildPath "error_log.txt"
 
-        $csvFiles = Get-ChildItem -Path $csvFolderPath -Filter "*_個装*-???.csv", "*_図面*-???.csv", "*_通知書*-???.csv"
+        $csvFiles = Get-ChildItem -Path $csvFolderPath | Where-Object { $_.Name -match "_個装-???.csv" -or $_.Name -match "_図面-???.csv" -or $_.Name -match "_通知書-???.csv" }
 
         foreach ($csvFile in $csvFiles) {
             $csvData = Import-Csv -Path $csvFile.FullName
