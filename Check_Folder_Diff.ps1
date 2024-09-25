@@ -57,37 +57,37 @@ $statsA = Get-FolderStats -folderPath $folderA
 $statsB = Get-FolderStats -folderPath $folderB
 
 # 結果を表示
-Write-Host "Items only in $folderA:"
+Write-Host "Items only in ${folderA}:"
 $onlyInA | ForEach-Object { Write-Host $_ }
 
-Write-Host "`nItems only in $folderB:"
+Write-Host "`nItems only in ${folderB}:"
 $onlyInB | ForEach-Object { Write-Host $_ }
 
 # フォルダAの統計情報を表示
-Write-Host "`nStatistics for $folderA:"
+Write-Host "`nStatistics for ${folderA}:"
 Write-Host "File Count: $($statsA.FileCount)"
 Write-Host "Folder Count: $($statsA.FolderCount)"
 Write-Host "Total Size: $([math]::Round($statsA.TotalSize / 1MB, 2)) MB"
 
 # フォルダBの統計情報を表示
-Write-Host "`nStatistics for $folderB:"
+Write-Host "`nStatistics for ${folderB}:"
 Write-Host "File Count: $($statsB.FileCount)"
 Write-Host "Folder Count: $($statsB.FolderCount)"
 Write-Host "Total Size: $([math]::Round($statsB.TotalSize / 1MB, 2)) MB"
 
 # ログファイルに詳細な結果を出力
-Add-Content -Path $logFilePath -Value "Items only in $folderA:"
+Add-Content -Path $logFilePath -Value "Items only in ${folderA}:"
 $onlyInA | ForEach-Object { Add-Content -Path $logFilePath -Value $_ }
 
-Add-Content -Path $logFilePath -Value "`nItems only in $folderB:"
+Add-Content -Path $logFilePath -Value "`nItems only in ${folderB}:"
 $onlyInB | ForEach-Object { Add-Content -Path $logFilePath -Value $_ }
 
-Add-Content -Path $logFilePath -Value "`nStatistics for $folderA:"
+Add-Content -Path $logFilePath -Value "`nStatistics for ${folderA}:"
 Add-Content -Path $logFilePath -Value "File Count: $($statsA.FileCount)"
 Add-Content -Path $logFilePath -Value "Folder Count: $($statsA.FolderCount)"
 Add-Content -Path $logFilePath -Value "Total Size: $([math]::Round($statsA.TotalSize / 1MB, 2)) MB"
 
-Add-Content -Path $logFilePath -Value "`nStatistics for $folderB:"
+Add-Content -Path $logFilePath -Value "`nStatistics for ${folderB}:"
 Add-Content -Path $logFilePath -Value "File Count: $($statsB.FileCount)"
 Add-Content -Path $logFilePath -Value "Folder Count: $($statsB.FolderCount)"
 Add-Content -Path $logFilePath -Value "Total Size: $([math]::Round($statsB.TotalSize / 1MB, 2)) MB"
