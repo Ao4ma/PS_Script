@@ -1,3 +1,4 @@
+# PCクラスの定義
 class PC {
     [string]$Name
     [string]$IPAddress
@@ -7,7 +8,6 @@ class PC {
     [string]$PdfPoolFolderPath
     [string]$PdfFolderPath
     [hashtable]$PdfPoolHashTable
-    [hashtable]$FileNameToFullPathHashTable
 
     # コンストラクタ
     PC() {
@@ -35,7 +35,6 @@ class PC {
         $this.PdfPoolFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdf一時保管"
         $this.PdfFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdfデータ"
         $this.PdfPoolHashTable = @{}
-        $this.FileNameToFullPathHashTable = @{}
 
         # フォルダの存在確認
         $this.CheckFoldersExist()
@@ -62,17 +61,15 @@ class PC {
     # PDFプールフォルダのハッシュテーブルを更新
     [void]UpdatePdfPoolHashTable() {
         $this.PdfPoolHashTable.Clear()
-        $this.FileNameToFullPathHashTable.Clear()
         $files = Get-ChildItem -Path $this.PdfPoolFolderPath -Recurse -Include *.pdf, *.txt
         $totalFiles = $files.Count
         $currentFileIndex = 0
 
         foreach ($file in $files) {
             $currentFileIndex++
-            Write-Host "$currentFileIndex of $totalFiles"
+            Write-Host "Processing file $currentFileIndex of $totalFiles: $($file.Name)"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             $this.PdfPoolHashTable[$file.FullName] = $hash.Hash
-            $this.FileNameToFullPathHashTable[$file.Name] = $file.FullName
         }
         $this.SavePdfPoolHashTable()
     }
@@ -84,9 +81,6 @@ class PC {
         }
         $json = $this.PdfPoolHashTable | ConvertTo-Json
         $json | Out-File -FilePath "$($this.WorkFolder)\PdfPoolHashTable.json" -Encoding UTF8
-
-        $jsonFileNameToFullPath = $this.FileNameToFullPathHashTable | ConvertTo-Json
-        $jsonFileNameToFullPath | Out-File -FilePath "$($this.WorkFolder)\FileNameToFullPathHashTable.json" -Encoding UTF8
     }
 
     # ハッシュテーブルをファイルから読み込み
@@ -96,13 +90,6 @@ class PC {
             $this.PdfPoolHashTable = $json | ConvertFrom-Json
         } else {
             $this.PdfPoolHashTable = @{}
-        }
-
-        if (Test-Path -Path "$($this.WorkFolder)\FileNameToFullPathHashTable.json") {
-            $jsonFileNameToFullPath = Get-Content -Path "$($this.WorkFolder)\FileNameToFullPathHashTable.json" -Raw
-            $this.FileNameToFullPathHashTable = $jsonFileNameToFullPath | ConvertFrom-Json
-        } else {
-            $this.FileNameToFullPathHashTable = @{}
         }
     }
 
@@ -122,3 +109,75 @@ class PC {
         return $false
     }
 }
+
+# FileManagerクラスの定義
+class FileManager {
+    [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$pdfFolderPath, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable) {
+        $successCount.Value = 0
+        $failureCount.Value = 0
+        $errorLogPath = Join-Path -Path $pdfFolderPath -ChildPath "error_log.txt"
+
+        $csvFiles = Get-ChildItem -Path $csvFolderPath | Where-Object { $_.Name -match "_個装-???.csv" -or $_.Name -match "_図面-???.csv" -or $_.Name -match "_通知書-???.csv" }
+
+        foreach ($csvFile in $csvFiles) {
+            $csvData = Import-Csv -Path $csvFile.FullName
+            $csvFileName = [System.IO.Path]::GetFileNameWithoutExtension($csvFile.Name)
+            $csvDestinationFolder = Join-Path -Path $pdfFolderPath -ChildPath $csvFileName
+
+            # CSVファイル名のフォルダを作成
+            if (-not (Test-Path -Path $csvDestinationFolder)) {
+                New-Item -Path $csvDestinationFolder -ItemType Directory
+            }
+
+            foreach ($row in $csvData) {
+                $fileName = $row.'関連付け用ファイル名'
+                $pdfFilePath = Join-Path -Path $pdfPoolFolderPath -ChildPath "$fileName.pdf"
+                $txtFilePath = Join-Path -Path $pdfPoolFolderPath -ChildPath "$fileName.txt"
+
+                $sourceFilePath = if (Test-Path $pdfFilePath) { $pdfFilePath } elseif (Test-Path $txtFilePath) { $txtFilePath } else { $null }
+
+                if ($sourceFilePath -and $pdfPoolHashTable.ContainsKey($sourceFilePath)) {
+                    $destinationFilePath = Join-Path -Path $csvDestinationFolder -ChildPath (Get-Item $sourceFilePath).Name
+
+                    Write-Host "Copying file: $sourceFilePath to $destinationFilePath"
+
+                    try {
+                        Copy-Item -Path $sourceFilePath -Destination $destinationFilePath -ErrorAction Stop
+                        $successCount.Value++
+                        Write-Host "Successfully copied: $sourceFilePath"
+                    } catch {
+                        $errorMessage = "Failed to copy $sourceFilePath to $destinationFilePath"
+                        Write-Host $errorMessage
+                        $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+                        $failureCount.Value++
+                    }
+                } else {
+                    $errorMessage = "Source file not found or not in hash table: $fileName"
+                    Write-Host $errorMessage
+                    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+                    $failureCount.Value++
+                }
+            }
+        }
+    }
+}
+
+# メイン処理
+$fileManager = [FileManager]::new()
+$successCount = [ref]0
+$failureCount = [ref]0
+
+# PCオブジェクトの作成
+$pc = [PC]::new()
+
+# PDFプールフォルダの状態をチェックし、変化があればハッシュテーブルを更新
+if ($pc.HasPdfPoolFolderChanged()) {
+    $pc.UpdatePdfPoolHashTable()
+}
+
+# ファイルコピー処理の実行
+$fileManager.CopyFilesBasedOnCsv($pc.CsvFolderPath, $pc.PdfPoolFolderPath, $pc.PdfFolderPath, [ref]$successCount, [ref]$failureCount, $pc.PdfPoolHashTable)
+
+# 成功と失敗のカウントを表示
+Write-Host "Success: $($successCount.Value)"
+Write-Host "Failure: $($failureCount.Value)"
