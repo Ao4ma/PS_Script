@@ -109,17 +109,17 @@ class PC {
 
 # FileManagerクラスの定義
 class FileManager {
-    [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$destinationFolder, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable) {
+    [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$pdfFolderPath, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable) {
         $successCount.Value = 0
         $failureCount.Value = 0
-        $errorLogPath = Join-Path -Path $destinationFolder -ChildPath "error_log.txt"
+        $errorLogPath = Join-Path -Path $pdfFolderPath -ChildPath "error_log.txt"
 
         $csvFiles = Get-ChildItem -Path $csvFolderPath -Filter "*_個装*-???.csv", "*_図面*-???.csv", "*_通知書*-???.csv"
 
         foreach ($csvFile in $csvFiles) {
             $csvData = Import-Csv -Path $csvFile.FullName
             $csvFileName = [System.IO.Path]::GetFileNameWithoutExtension($csvFile.Name)
-            $csvDestinationFolder = Join-Path -Path $destinationFolder -ChildPath $csvFileName
+            $csvDestinationFolder = Join-Path -Path $pdfFolderPath -ChildPath $csvFileName
 
             # CSVファイル名のフォルダを作成
             if (-not (Test-Path -Path $csvDestinationFolder)) {
