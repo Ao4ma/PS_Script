@@ -109,32 +109,49 @@ class PC {
 
 # FileManagerクラスの定義
 class FileManager {
-    [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$sourceFolder, [string]$destinationFolder, [string]$realDataFolder, [ref]$successCount, [ref]$failureCount) {
+    [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$destinationFolder, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable) {
         $successCount.Value = 0
         $failureCount.Value = 0
+        $errorLogPath = Join-Path -Path $destinationFolder -ChildPath "error_log.txt"
 
         $csvFiles = Get-ChildItem -Path $csvFolderPath -Filter "*_個装*-???.csv", "*_図面*-???.csv", "*_通知書*-???.csv"
 
         foreach ($csvFile in $csvFiles) {
             $csvData = Import-Csv -Path $csvFile.FullName
+            $csvFileName = [System.IO.Path]::GetFileNameWithoutExtension($csvFile.Name)
+            $csvDestinationFolder = Join-Path -Path $destinationFolder -ChildPath $csvFileName
+
+            # CSVファイル名のフォルダを作成
+            if (-not (Test-Path -Path $csvDestinationFolder)) {
+                New-Item -Path $csvDestinationFolder -ItemType Directory
+            }
 
             foreach ($row in $csvData) {
-                $sourceFilePath = Join-Path -Path $sourceFolder -ChildPath $row.FileName
-                $destinationFilePath = Join-Path -Path $destinationFolder -ChildPath $row.FileName
+                $fileName = $row.'関連付け用ファイル名'
+                $pdfFilePath = Join-Path -Path $pdfPoolFolderPath -ChildPath "$fileName.pdf"
+                $txtFilePath = Join-Path -Path $pdfPoolFolderPath -ChildPath "$fileName.txt"
 
-                Write-Host "Copying file: $sourceFilePath to $destinationFilePath"
+                $sourceFilePath = if (Test-Path $pdfFilePath) { $pdfFilePath } elseif (Test-Path $txtFilePath) { $txtFilePath } else { $null }
 
-                if (Test-Path $sourceFilePath) {
+                if ($sourceFilePath -and $pdfPoolHashTable.ContainsKey($sourceFilePath)) {
+                    $destinationFilePath = Join-Path -Path $csvDestinationFolder -ChildPath (Get-Item $sourceFilePath).Name
+
+                    Write-Host "Copying file: $sourceFilePath to $destinationFilePath"
+
                     try {
-                        Copy-Item -Path $sourceFilePath -Destination $destinationFilePath -Force
+                        Copy-Item -Path $sourceFilePath -Destination $destinationFilePath -ErrorAction Stop
                         $successCount.Value++
                         Write-Host "Successfully copied: $sourceFilePath"
                     } catch {
-                        Write-Host "Failed to copy $sourceFilePath to $destinationFilePath"
+                        $errorMessage = "Failed to copy $sourceFilePath to $destinationFilePath"
+                        Write-Host $errorMessage
+                        $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
                         $failureCount.Value++
                     }
                 } else {
-                    Write-Host "Source file not found: $sourceFilePath"
+                    $errorMessage = "Source file not found or not in hash table: $fileName"
+                    Write-Host $errorMessage
+                    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
                     $failureCount.Value++
                 }
             }
@@ -156,7 +173,7 @@ if ($pc.HasPdfPoolFolderChanged()) {
 }
 
 # ファイルコピー処理の実行
-$fileManager.CopyFilesBasedOnCsv($pc.CsvFolderPath, $pc.WorkFolder, "C:\OutDataFolder", "C:\RealDataFolder", [ref]$successCount, [ref]$failureCount)
+$fileManager.CopyFilesBasedOnCsv($pc.CsvFolderPath, $pc.PdfPoolFolderPath, $pc.PdfFolderPath, [ref]$successCount, [ref]$failureCount, $pc.PdfPoolHashTable)
 
 # 成功と失敗のカウントを表示
 Write-Host "Success: $($successCount.Value)"
