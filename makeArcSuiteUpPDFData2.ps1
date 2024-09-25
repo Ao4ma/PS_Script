@@ -1,111 +1,92 @@
-# FileManagerクラスの定義
-class FileManager {
-    # CSVに基づいてファイルをコピーするメソッド
-    [void] CopyFilesBasedOnCsv([string]$csvFilePath, [string]$workHomeFolder, [string]$outDataFolder, [string]$realDataFolder, [ref]$successCount, [ref]$failureCount) {
-        # CSVファイルをインポート
-        $csvData = Import-Csv -Path $csvFilePath
-
-        foreach ($record in $csvData) {
-            # CSVの1列目をファイル名として取得
-            $fileName = $record.PSObject.Properties[0].Value
-
-            # realDataFolderを再帰的にサーチしてファイルを探す
-            $foundFile = Get-ChildItem -Path $realDataFolder -Recurse -Filter $fileName | Select-Object -First 1
-
-            if ($foundFile) {
-                # outDataFolder直下にCSVファイル名のフォルダを作成
-                $csvFolderName = [System.IO.Path]::GetFileNameWithoutExtension($csvFilePath)
-                $destinationFolder = Join-Path -Path $outDataFolder -ChildPath $csvFolderName
-
-                if (-Not (Test-Path -Path $destinationFolder)) {
-                    New-Item -Path $destinationFolder -ItemType Directory
-                }
-
-                # 見つけたファイルをコピー
-                $destinationPath = Join-Path -Path $destinationFolder -ChildPath $foundFile.Name
-                Copy-Item -Path $foundFile.FullName -Destination $destinationPath -Force
-                $successCount.Value++
-                $this.LogSuccess($workHomeFolder, "Successfully copied: $fileName to $destinationPath")
-                Write-Host "Successfully copied: $fileName to $destinationPath"
-            } else {
-                # ファイルが見つからなかった場合の処理
-                $this.LogError($workHomeFolder, "File not found: $fileName, Record: $($record | ConvertTo-Json -Compress)")
-                $failureCount.Value++
-                Write-Host "File not found: $fileName"
-            }
-        }
-    }
-
-    # フォルダが存在するか確認し、存在しない場合は作成するメソッド
-    [void] EnsureFolderExists([string]$folderPath) {
-        if (-Not (Test-Path -Path $folderPath)) {
-            New-Item -Path $folderPath -ItemType Directory
-        } else {
-            Remove-Item -Path "$folderPath\*" -Recurse -Force
-        }
-    }
-
-    # エラーログを記録するメソッド
-    [void] LogError([string]$workHomeFolder, [string]$message) {
-        $errorFile = Join-Path -Path $workHomeFolder -ChildPath "error.log"
-        Add-Content -Path $errorFile -Value $message
-    }
-
-    # 成功ログを記録するメソッド
-    [void] LogSuccess([string]$workHomeFolder, [string]$message) {
-        $successFile = Join-Path -Path $workHomeFolder -ChildPath "success.log"
-        Add-Content -Path $successFile -Value $message
-    }
-}
-
 # PCクラスの定義
 class PC {
     [string]$Name
     [string]$IPAddress
-    [string]$HomeFolder
+    [string]$MACAddress
     [string]$WorkFolder
+    [string]$CsvFolderPath
+    [string]$PdfPoolFolderPath
+    [string]$PdfFolderPath
 
-    # コンストラクタ
-    PC([string]$name, [string]$ipAddress) {
+    PC([string]$name, [string]$ipAddress, [string]$macAddress, [string]$workFolder) {
         $this.Name = $name
         $this.IPAddress = $ipAddress
+        $this.MACAddress = $macAddress
+        $this.WorkFolder = $workFolder
+        $this.CsvFolderPath = Join-Path -Path $workFolder -ChildPath "#登録用csvデータ"
+        $this.PdfPoolFolderPath = Join-Path -Path $workFolder -ChildPath "#登録用pdf一時保管"
+        $this.PdfFolderPath = Join-Path -Path $workFolder -ChildPath "#登録用pdfデータ"
 
-        # コマンドプロンプトでhostnameを実行してPC名を取得
-        $pcName = (hostname).Trim()
-
-        # 特定のPC名を別名に変換
-        switch ($pcName) {
-            "TUF-FX517ZM" { $pcName = "AsusTUF" }
-        }
-
-        # PC名に応じたホームフォルダとワークフォルダの設定
-        switch ($pcName) {
-            "Delld033" {
-                $this.HomeFolder = "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\"
-                $this.WorkFolder = "S:\\技術部storage\\管理課\\PDM復旧"
-            }
-            "AsusTUF" {
-                $this.HomeFolder = "C:\\Users\\22200\\OneDrive\\ドキュメント\\GitHub\\PS_Script\\"
-                $this.WorkFolder = "D:\\技術部storage\\管理課\\PDM復旧"
-            }
-            default {
-                throw "Unknown PC name: $pcName"
-            }
-        }
     }
 
-    # オブジェクトの文字列表現を返すメソッド
-    [string] ToString() {
-        return "$($this.Name) ($($this.IPAddress))"
+    PC() {
+        $this.Name = (hostname)
+        
+        # ネットワークインターフェース情報を取得
+        $networkInterface = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
+        $this.IPAddress = (Get-NetIPAddress -InterfaceIndex $networkInterface.ifIndex -AddressFamily IPv4).IPAddress
+        $this.MACAddress = $networkInterface.MacAddress
+
+        switch ($this.Name) {
+            "delld033" {
+                $this.WorkFolder = "S:\技術部storage\管理課\管理課共有資料\ArcSuite\#eValue-AS移行データ(本番)"  # デフォルトの作業フォルダ
+            }
+            "AsusTuf" {
+                $this.WorkFolder = "D:\技術部storage\管理課\管理課共有資料\ArcSuite\#eValue-AS移行データ(本番)"  # デフォルトの作業フォルダ
+            }
+            default {
+                $this.WorkFolder = "C:\技術部storage\管理課\管理課共有資料\ArcSuite\#eValue-AS移行データ(本番)"  # デフォルトの作業フォルダ
+            }
+        }
+        
+        # フォルダが存在しない場合は生成
+        if (-not (Test-Path -Path $this.WorkFolder)) {
+            New-Item -Path $this.WorkFolder -ItemType Directory
+        }
+        $this.CsvFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用csvデータ"
+        $this.PdfPoolFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdf一時保管"
+        $this.PdfFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdfデータ"
+        
+        # サブフォルダも存在しない場合は生成
+        foreach ($folder in @($this.CsvFolderPath, $this.PdfPoolFolderPath, $this.PdfFolderPath)) {
+            if (-not (Test-Path -Path $folder)) {
+                New-Item -Path $folder -ItemType Directory
+            }
+        }
     }
 }
 
-# エスケープ文字処理の例
-function EscapeSpecialCharacters {
-    param (
-        [string]$inputString
-    )
-    return $inputString -replace '([\\*+?.()|{}[\]])', '\\$1'
+# FileManagerクラスの定義
+class FileManager {
+    [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$sourceFolder, [string]$destinationFolder, [string]$realDataFolder, [ref]$successCount, [ref]$failureCount) {
+        $successCount.Value = 0
+        $failureCount.Value = 0
+
+
+        $csvFiles = Get-ChildItem -Path $csvFolderPath -Filter "*_個装*-???.csv", "*_図面*-???.csv", "*_通知書*-???.csv"
+
+        foreach ($csvFile in $csvFiles) {
+            $csvData = Import-Csv -Path $csvFile.FullName
+
+            foreach ($row in $csvData) {
+                $sourceFilePath = Join-Path -Path $sourceFolder -ChildPath $row.FileName
+                $destinationFilePath = Join-Path -Path $destinationFolder -ChildPath $row.FileName
+
+                if (Test-Path $sourceFilePath) {
+                    try {
+                        Copy-Item -Path $sourceFilePath -Destination $destinationFilePath -Force
+                        $successCount.Value++
+                    } catch {
+                        Write-Host "Failed to copy $sourceFilePath to $destinationFilePath"
+                        $failureCount.Value++
+                    }
+                } else {
+                    Write-Host "Source file not found: $sourceFilePath"
+                    $failureCount.Value++
+                }
+            }
+        }
+    }
 }
 
 # メイン処理
@@ -113,8 +94,11 @@ $fileManager = [FileManager]::new()
 $successCount = [ref]0
 $failureCount = [ref]0
 
+# PCオブジェクトの作成
+$pc = [PC]::new()
+
 # ファイルコピー処理の実行
-$fileManager.CopyFilesBasedOnCsv("C:\path\to\your\csvfile.csv", $settings.ScriptHomeFolder, $settings.OutDataFolder, "C:\RealDataFolder", [ref]$successCount, [ref]$failureCount)
+$fileManager.CopyFilesBasedOnCsv($pc.CsvFolderPath, $pc.WorkFolder, $settings.OutDataFolder, "C:\RealDataFolder", [ref]$successCount, [ref]$failureCount)
 
 # 成功と失敗のカウントを表示
 Write-Host "Success: $($successCount.Value)"
