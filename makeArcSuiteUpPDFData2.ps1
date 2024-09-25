@@ -67,31 +67,32 @@ class PC {
 
         foreach ($file in $files) {
             $currentFileIndex++
-            Write-Host "Processing file $currentFileIndex of $Files.Count: $($file.FullName)"
+#            Write-Host "Processing file $currentFileIndex of $Files.Count : $($file.Name)`n"
+            Write-Host "$currentFileIndex of $totalFiles"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             $this.PdfPoolHashTable[$file.FullName] = $hash.Hash
         }
         $this.SavePdfPoolHashTable()
     }
 
-    # ハッシュテーブルをファイルに保存
-    [void]SavePdfPoolHashTable() {
-        if (-not (Test-Path -Path $this.WorkFolder)) {
-            New-Item -Path $this.WorkFolder -ItemType Directory
-        }
-        $json = $this.PdfPoolHashTable | ConvertTo-Json
-        $json | Out-File -FilePath "$this.WorkFolder\PdfPoolHashTable.json" -Encoding UTF8
+# ハッシュテーブルをファイルに保存
+[void]SavePdfPoolHashTable() {
+    if (-not (Test-Path -Path $($this.WorkFolder))) {
+        New-Item -Path $($this.WorkFolder) -ItemType Directory
     }
+    $json = $this.PdfPoolHashTable | ConvertTo-Json
+    $json | Out-File -FilePath "$($this.WorkFolder)\PdfPoolHashTable.json" -Encoding UTF8
+}
 
-    # ハッシュテーブルをファイルから読み込み
-    [void]LoadPdfPoolHashTable() {
-        if (Test-Path -Path "$this.WorkFolder\PdfPoolHashTable.json") {
-            $json = Get-Content -Path "$this.WorkFolder\PdfPoolHashTable.json" -Raw
-            $this.PdfPoolHashTable = $json | ConvertFrom-Json
-        } else {
-            $this.PdfPoolHashTable = @{}
-        }
+# ハッシュテーブルをファイルから読み込み
+[void]LoadPdfPoolHashTable() {
+    if (Test-Path -Path "$($this.WorkFolder)\PdfPoolHashTable.json") {
+        $json = Get-Content -Path "$($this.WorkFolder)\PdfPoolHashTable.json" -Raw
+        $this.PdfPoolHashTable = $json | ConvertFrom-Json
+    } else {
+        $this.PdfPoolHashTable = @{}
     }
+}
 
     # PDFプールフォルダの状態をチェック
     [bool]HasPdfPoolFolderChanged() {
