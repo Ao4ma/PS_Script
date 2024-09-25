@@ -1,7 +1,7 @@
 param (
-    [string]$folderA = "C:\Path\To\FolderA", # フォルダAのパス
-    [string]$folderB = "C:\Path\To\FolderB", # フォルダBのパス
-    [string]$logFilePath = $(Join-Path -Path (Split-Path -Path $MyInvocation.MyCommand.Path -Parent) -ChildPath "フォルダ差異確認結果.txt") # ログファイルのパス（デフォルトはスクリプトのある場所）
+    [string]$folderA = "Z:\管理課\PDM復旧\SWPDM復旧データ\1\SWPDM", # フォルダAのパス
+    [string]$folderB = "Z:\管理課\PDM復旧\復旧データ照合\SWPDM2確認\SWPDM_2", # フォルダBのパス
+    [string]$logFilePath = "Z:\管理課\PDM復旧\復旧データ照合\フォルダ差異確認結果.txt" # ログファイルのパス（デフォルト）
 )
 
 function Get-FolderContent {
