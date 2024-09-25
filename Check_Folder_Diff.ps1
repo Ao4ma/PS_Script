@@ -1,19 +1,16 @@
 param (
     [string]$folderA = "C:\Path\To\FolderA", # フォルダAのパス
-    [string]$folderB = "C:\Path\To\FolderB"  # フォルダBのパス
+    [string]$folderB = "C:\Path\To\FolderB", # フォルダBのパス
+    [string]$logFilePath = $(Join-Path -Path (Split-Path -Path $MyInvocation.MyCommand.Path -Parent) -ChildPath "フォルダ差異確認結果.txt") # ログファイルのパス（デフォルトはスクリプトのある場所）
 )
-
-# スクリプトの置いてある場所にログファイルを設定
-$scriptPath = $MyInvocation.MyCommand.Path
-$logFilePath = Join-Path -Path (Split-Path -Path $scriptPath -Parent) -ChildPath "フォルダ差異確認結果.txt"
 
 function Get-FolderContent {
     param (
         [string]$folderPath
     )
 
-    # フォルダ内のファイルとサブフォルダを再帰的に取得
-    $items = Get-ChildItem -Path $folderPath -Recurse -Force | ForEach-Object {
+    # フォルダ内のPDF、TXT、およびTIFFファイルを再帰的に取得
+    $items = Get-ChildItem -Path $folderPath -Recurse -Force -Include *.pdf, *.txt, *.tiff | ForEach-Object {
         $_.FullName.Substring($folderPath.Length).TrimStart('\')
     }
     return $items
@@ -24,7 +21,7 @@ function Get-FolderStats {
         [string]$folderPath
     )
 
-    $files = Get-ChildItem -Path $folderPath -Recurse -File -Force
+    $files = Get-ChildItem -Path $folderPath -Recurse -File -Force -Include *.pdf, *.txt, *.tiff
     $folders = Get-ChildItem -Path $folderPath -Recurse -Directory -Force
 
     $fileCount = $files.Count
