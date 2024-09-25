@@ -62,7 +62,12 @@ class PC {
     [void]UpdatePdfPoolHashTable() {
         $this.PdfPoolHashTable.Clear()
         $files = Get-ChildItem -Path $this.PdfPoolFolderPath -Recurse -Include *.pdf, *.txt
+        $totalFiles = $files.Count
+        $currentFileIndex = 0
+
         foreach ($file in $files) {
+            $currentFileIndex++
+            Write-Host "Processing file $currentFileIndex of $totalFiles: $($file.FullName)"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             $this.PdfPoolHashTable[$file.FullName] = $hash.Hash
         }
@@ -117,10 +122,13 @@ class FileManager {
                 $sourceFilePath = Join-Path -Path $sourceFolder -ChildPath $row.FileName
                 $destinationFilePath = Join-Path -Path $destinationFolder -ChildPath $row.FileName
 
+                Write-Host "Copying file: $sourceFilePath to $destinationFilePath"
+
                 if (Test-Path $sourceFilePath) {
                     try {
                         Copy-Item -Path $sourceFilePath -Destination $destinationFilePath -Force
                         $successCount.Value++
+                        Write-Host "Successfully copied: $sourceFilePath"
                     } catch {
                         Write-Host "Failed to copy $sourceFilePath to $destinationFilePath"
                         $failureCount.Value++
