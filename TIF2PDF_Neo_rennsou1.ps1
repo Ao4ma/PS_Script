@@ -40,23 +40,41 @@ function Load-PdfHashTable {
     }
 }
 
+# ディレクトリのハッシュを計算する関数
+function Get-DirectoryHash {
+    param (
+        [string]$directoryPath
+    )
+
+    $hashAlgorithm = [System.Security.Cryptography.HashAlgorithm]::Create("SHA256")
+    $files = Get-ChildItem -Path $directoryPath -Recurse -File
+
+    foreach ($file in $files) {
+        $fileStream = [System.IO.File]::OpenRead($file.FullName)
+        $hashAlgorithm.ComputeHash($fileStream)
+        $fileStream.Close()
+    }
+
+    return [BitConverter]::ToString($hashAlgorithm.Hash).Replace("-", "")
+}
+
 # PDFフォルダの変更をチェックする関数
 function Has-PdfFolderChanged {
     param (
         [string]$pdfBasePath
     )
 
-    $currentHash = Get-FileHash -Path $pdfBasePath -Algorithm SHA256
+    $currentHash = Get-DirectoryHash -directoryPath $pdfBasePath
     $hashFilePath = "$pdfBasePath\hash.txt"
 
     if (Test-Path -Path $hashFilePath) {
         $savedHash = Get-Content -Path $hashFilePath -Raw
-        if ($currentHash.Hash -eq $savedHash) {
+        if ($currentHash -eq $savedHash) {
             return $false
         }
     }
 
-    $currentHash.Hash | Out-File -FilePath $hashFilePath -Encoding UTF8
+    $currentHash | Out-File -FilePath $hashFilePath -Encoding UTF8
     return $true
 }
 
