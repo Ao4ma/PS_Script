@@ -69,7 +69,7 @@ class PC {
 
         foreach ($file in $files) {
             $currentFileIndex++
-            Write-Host "Processing file $currentFileIndex of $totalFiles: $($file.FullName)"
+            Write-Host "Processing file $currentFileIndex of $totalFiles"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             $this.PdfPoolHashTable[$file.FullName] = $hash.Hash
         }
@@ -105,7 +105,7 @@ class PC {
 
         foreach ($file in $files) {
             $currentFileIndex++
-            Write-Host "Processing file $currentFileIndex of $totalFiles: $($file.FullName)"
+            Write-Host "Processing file $currentFileIndex of $totalFiles"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             $this.FilePathHashTable[$file.FullName] = $hash.Hash
         }
