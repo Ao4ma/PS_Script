@@ -90,8 +90,17 @@ class PC {
     [void]LoadPdfPoolHashTable() {
         $filePath = Join-Path -Path $this.WorkFolder -ChildPath "PdfPoolHashTable.json"
         if (Test-Path -Path $filePath) {
+            # JSON ファイルの読み込み
             $json = Get-Content -Path $filePath -Raw
-            $this.PdfPoolHashTable = $json | ConvertFrom-Json > $null          
+
+            # JSON を PSCustomObject に変換
+            $psCustomObject = $json | ConvertFrom-Json
+
+            # PSCustomObject を Hashtable に変換
+            $this.PdfPoolHashTable = @{}
+            foreach ($key in $psCustomObject.PSObject.Properties.Name) {
+                $this.PdfPoolHashTable[$key] = $psCustomObject.$key
+            }
         } else {
             $this.PdfPoolHashTable = @{}
         }
@@ -127,8 +136,17 @@ class PC {
     [void]LoadFilePathHashTable() {
         $filePath = Join-Path -Path $this.WorkFolder -ChildPath "FilePathHashTable.json"
         if (Test-Path -Path $filePath) {
+            # JSON ファイルの読み込み
             $json = Get-Content -Path $filePath -Raw
-            $this.FilePathHashTable = $json | ConvertFrom-Json  > $null
+
+            # JSON を PSCustomObject に変換
+            $psCustomObject = $json | ConvertFrom-Json
+
+            # PSCustomObject を Hashtable に変換
+            $this.FilePathHashTable = @{}
+            foreach ($key in $psCustomObject.PSObject.Properties.Name) {
+                $this.FilePathHashTable[$key] = $psCustomObject.$key
+            }
         } else {
             $this.FilePathHashTable = @{}
         }
