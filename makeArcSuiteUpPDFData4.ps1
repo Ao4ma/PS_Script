@@ -91,7 +91,7 @@ class PC {
         $filePath = Join-Path -Path $this.WorkFolder -ChildPath "PdfPoolHashTable.json"
         if (Test-Path -Path $filePath) {
             $json = Get-Content -Path $filePath -Raw
-            $this.PdfPoolHashTable = $json | ConvertFrom-Json
+            $this.PdfPoolHashTable = $json | ConvertFrom-Json > $null          
         } else {
             $this.PdfPoolHashTable = @{}
         }
@@ -125,9 +125,10 @@ class PC {
 
     # ファイルパスのハッシュテーブルをファイルから読み込み
     [void]LoadFilePathHashTable() {
-        if (Test-Path -Path "$this.WorkFolder\FilePathHashTable.json") {
-            $json = Get-Content -Path "$this.WorkFolder\FilePathHashTable.json" -Raw
-            $this.FilePathHashTable = $json | ConvertFrom-Json
+        $filePath = Join-Path -Path $this.WorkFolder -ChildPath "FilePathHashTable.json"
+        if (Test-Path -Path $filePath) {
+            $json = Get-Content -Path $filePath -Raw
+            $this.FilePathHashTable = $json | ConvertFrom-Json  > $null
         } else {
             $this.FilePathHashTable = @{}
         }
