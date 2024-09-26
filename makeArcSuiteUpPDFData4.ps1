@@ -32,7 +32,7 @@ class PC {
         }
         
         $this.CsvFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用csvデータ"
-        $this.PdfPoolFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdf_生成場所"
+        $this.PdfPoolFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdf一時保管"
         $this.PdfFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdfデータ"
         $this.PdfPoolHashTable = @{}
         $this.FilePathHashTable = @{}
@@ -69,7 +69,7 @@ class PC {
 
         foreach ($file in $files) {
             $currentFileIndex++
-            Write-Host "$currentFileIndex of $files.Count"
+            Write-Host "Processing file $currentFileIndex of $totalFiles: $($file.FullName)"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             $this.PdfPoolHashTable[$file.FullName] = $hash.Hash
         }
@@ -79,10 +79,11 @@ class PC {
     # ハッシュテーブルをファイルに保存
     [void]SavePdfPoolHashTable() {
         if (-not (Test-Path -Path $this.WorkFolder)) {
-            New-Item -Path $this.WorkFolder -ItemType Directory
+            New-Item -Path $this.WorkFolder -ItemType Directory -Force
         }
         $json = $this.PdfPoolHashTable | ConvertTo-Json
-        $json | Out-File -FilePath "$this.WorkFolder\PdfPoolHashTable.json" -Encoding UTF8
+        $filePath = Join-Path -Path $this.WorkFolder -ChildPath "PdfPoolHashTable.json"
+        $json | Out-File -FilePath $filePath -Encoding UTF8
     }
 
     # ハッシュテーブルをファイルから読み込み
@@ -104,7 +105,7 @@ class PC {
 
         foreach ($file in $files) {
             $currentFileIndex++
-            Write-Host "Processing file $currentFileIndex of $totalFiles"
+            Write-Host "Processing file $currentFileIndex of $totalFiles: $($file.FullName)"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             $this.FilePathHashTable[$file.FullName] = $hash.Hash
         }
@@ -114,10 +115,11 @@ class PC {
     # ファイルパスのハッシュテーブルをファイルに保存
     [void]SaveFilePathHashTable() {
         if (-not (Test-Path -Path $this.WorkFolder)) {
-            New-Item -Path $this.WorkFolder -ItemType Directory
+            New-Item -Path $this.WorkFolder -ItemType Directory -Force
         }
         $json = $this.FilePathHashTable | ConvertTo-Json
-        $json | Out-File -FilePath "$this.WorkFolder\FilePathHashTable.json" -Encoding UTF8
+        $filePath = Join-Path -Path $this.WorkFolder -ChildPath "FilePathHashTable.json"
+        $json | Out-File -FilePath $filePath -Encoding UTF8
     }
 
     # ファイルパスのハッシュテーブルをファイルから読み込み
