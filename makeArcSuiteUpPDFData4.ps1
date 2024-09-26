@@ -88,8 +88,9 @@ class PC {
 
     # ハッシュテーブルをファイルから読み込み
     [void]LoadPdfPoolHashTable() {
-        if (Test-Path -Path "$this.WorkFolder\PdfPoolHashTable.json") {
-            $json = Get-Content -Path "$this.WorkFolder\PdfPoolHashTable.json" -Raw
+        $filePath = Join-Path -Path $this.WorkFolder -ChildPath "PdfPoolHashTable.json"
+        if (Test-Path -Path $filePath) {
+            $json = Get-Content -Path $filePath -Raw
             $this.PdfPoolHashTable = $json | ConvertFrom-Json
         } else {
             $this.PdfPoolHashTable = @{}
