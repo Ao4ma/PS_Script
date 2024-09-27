@@ -41,8 +41,8 @@ class PC {
         $this.CheckFoldersExist()
 
         # ハッシュテーブルの読み込み
-        $this.LoadPdfPoolHashTable()
-        $this.LoadFilePathHashTable()
+        $this.LoadHashTable("PdfPoolHashTable.json", [ref]$this.PdfPoolHashTable)
+        $this.LoadHashTable("FilePathHashTable.json", [ref]$this.FilePathHashTable)
     }
 
     # フォルダの存在確認
@@ -60,35 +60,35 @@ class PC {
         }
     }
 
-    # PDFプールフォルダのハッシュテーブルを更新
-    [void]UpdatePdfPoolHashTable() {
-        $this.PdfPoolHashTable.Clear()
-        $files = Get-ChildItem -Path $this.PdfPoolFolderPath -Recurse -Include *.pdf, *.txt
+    # ハッシュテーブルを更新
+    [void]UpdateHashTable([string]$folderPath, [string]$fileExtension, [ref]$hashTable) {
+        $hashTable.Value.Clear()
+        $files = Get-ChildItem -Path $folderPath -Recurse -Include $fileExtension
         $totalFiles = $files.Count
         $currentFileIndex = 0
 
         foreach ($file in $files) {
             $currentFileIndex++
-            Write-Host "Processing file $currentFileIndex of $totalFiles"
+            Write-Host "Processing file $currentFileIndex of $(totalFiles): $($file.FullName)"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
-            $this.PdfPoolHashTable[$file.FullName] = $hash.Hash
+            $hashTable.Value[$file.FullName] = $hash.Hash
         }
-        $this.SavePdfPoolHashTable()
+        $this.SaveHashTable($folderPath, $hashTable)
     }
 
     # ハッシュテーブルをファイルに保存
-    [void]SavePdfPoolHashTable() {
+    [void]SaveHashTable([string]$fileName, [ref]$hashTable) {
         if (-not (Test-Path -Path $this.WorkFolder)) {
             New-Item -Path $this.WorkFolder -ItemType Directory -Force
         }
-        $json = $this.PdfPoolHashTable | ConvertTo-Json
-        $filePath = Join-Path -Path $this.WorkFolder -ChildPath "PdfPoolHashTable.json"
+        $json = $hashTable.Value | ConvertTo-Json
+        $filePath = Join-Path -Path $this.WorkFolder -ChildPath $fileName
         $json | Out-File -FilePath $filePath -Encoding UTF8
     }
 
     # ハッシュテーブルをファイルから読み込み
-    [void]LoadPdfPoolHashTable() {
-        $filePath = Join-Path -Path $this.WorkFolder -ChildPath "PdfPoolHashTable.json"
+    [void]LoadHashTable([string]$fileName, [ref]$hashTable) {
+        $filePath = Join-Path -Path $this.WorkFolder -ChildPath $fileName
         if (Test-Path -Path $filePath) {
             # JSON ファイルの読み込み
             $json = Get-Content -Path $filePath -Raw
@@ -97,87 +97,25 @@ class PC {
             $psCustomObject = $json | ConvertFrom-Json
 
             # PSCustomObject を Hashtable に変換
-            $this.PdfPoolHashTable = @{}
+            $hashTable.Value = @{}
             foreach ($key in $psCustomObject.PSObject.Properties.Name) {
-                $this.PdfPoolHashTable[$key] = $psCustomObject.$key
+                $hashTable.Value[$key] = $psCustomObject.$key
             }
         } else {
-            $this.PdfPoolHashTable = @{}
+            $hashTable.Value = @{}
         }
     }
 
-    # ファイルパスのハッシュテーブルを更新
-    [void]UpdateFilePathHashTable() {
-        $this.FilePathHashTable.Clear()
-        $files = Get-ChildItem -Path $this.CsvFolderPath -Recurse -Include *.csv
-        $totalFiles = $files.Count
-        $currentFileIndex = 0
-
-        foreach ($file in $files) {
-            $currentFileIndex++
-            Write-Host "Processing file $currentFileIndex of $totalFiles"
-            $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
-            $this.FilePathHashTable[$file.FullName] = $hash.Hash
-        }
-        $this.SaveFilePathHashTable()
-    }
-
-    # ファイルパスのハッシュテーブルをファイルに保存
-    [void]SaveFilePathHashTable() {
-        if (-not (Test-Path -Path $this.WorkFolder)) {
-            New-Item -Path $this.WorkFolder -ItemType Directory -Force
-        }
-        $json = $this.FilePathHashTable | ConvertTo-Json
-        $filePath = Join-Path -Path $this.WorkFolder -ChildPath "FilePathHashTable.json"
-        $json | Out-File -FilePath $filePath -Encoding UTF8
-    }
-
-    # ファイルパスのハッシュテーブルをファイルから読み込み
-    [void]LoadFilePathHashTable() {
-        $filePath = Join-Path -Path $this.WorkFolder -ChildPath "FilePathHashTable.json"
-        if (Test-Path -Path $filePath) {
-            # JSON ファイルの読み込み
-            $json = Get-Content -Path $filePath -Raw
-
-            # JSON を PSCustomObject に変換
-            $psCustomObject = $json | ConvertFrom-Json
-
-            # PSCustomObject を Hashtable に変換
-            $this.FilePathHashTable = @{}
-            foreach ($key in $psCustomObject.PSObject.Properties.Name) {
-                $this.FilePathHashTable[$key] = $psCustomObject.$key
-            }
-        } else {
-            $this.FilePathHashTable = @{}
-        }
-    }
-
-    # PDFプールフォルダの状態をチェック
-    [bool]HasPdfPoolFolderChanged() {
-        $currentFiles = Get-ChildItem -Path $this.PdfPoolFolderPath -Recurse -Include *.pdf, *.txt
-        if ($currentFiles.Count -ne $this.PdfPoolHashTable.Count) {
+    # フォルダの状態をチェック
+    [bool]HasFolderChanged([string]$folderPath, [string]$fileExtension, [hashtable]$hashTable) {
+        $currentFiles = Get-ChildItem -Path $folderPath -Recurse -Include $fileExtension
+        if ($currentFiles.Count -ne $hashTable.Count) {
             return $true
         }
 
         foreach ($file in $currentFiles) {
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
-            if (-not $this.PdfPoolHashTable.ContainsKey($file.FullName) -or $this.PdfPoolHashTable[$file.FullName] -ne $hash.Hash) {
-                return $true
-            }
-        }
-        return $false
-    }
-
-    # ファイルパスの状態をチェック
-    [bool]HasFilePathChanged() {
-        $currentFiles = Get-ChildItem -Path $this.CsvFolderPath -Recurse -Include *.csv
-        if ($currentFiles.Count -ne $this.FilePathHashTable.Count) {
-            return $true
-        }
-
-        foreach ($file in $currentFiles) {
-            $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
-            if (-not $this.FilePathHashTable.ContainsKey($file.FullName) -or $this.FilePathHashTable[$file.FullName] -ne $hash.Hash) {
+            if (-not $hashTable.ContainsKey($file.FullName) -or $hashTable[$file.FullName] -ne $hash.Hash) {
                 return $true
             }
         }
@@ -248,13 +186,13 @@ $failureCount = [ref]0
 $pc = [PC]::new()
 
 # PDFプールフォルダの状態をチェックし、変化があればハッシュテーブルを更新
-if ($pc.HasPdfPoolFolderChanged()) {
-    $pc.UpdatePdfPoolHashTable()
+if ($pc.HasFolderChanged($pc.PdfPoolFolderPath, "*.pdf, *.txt", $pc.PdfPoolHashTable)) {
+    $pc.UpdateHashTable($pc.PdfPoolFolderPath, "*.pdf, *.txt", [ref]$pc.PdfPoolHashTable)
 }
 
 # ファイルパスの状態をチェックし、変化があればハッシュテーブルを更新
-if ($pc.HasFilePathChanged()) {
-    $pc.UpdateFilePathHashTable()
+if ($pc.HasFolderChanged($pc.CsvFolderPath, "*.csv", $pc.FilePathHashTable)) {
+    $pc.UpdateHashTable($pc.CsvFolderPath, "*.csv", [ref]$pc.FilePathHashTable)
 }
 
 # ファイルコピー処理の実行
