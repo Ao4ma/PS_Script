@@ -11,6 +11,7 @@ class PC {
 
     # コンストラクタ
     PC() {
+        Write-Host "Entering PC constructor"
         $this.Name = (hostname)
         
         # ネットワークインターフェース情報を取得
@@ -43,10 +44,12 @@ class PC {
         # ハッシュテーブルの読み込み
         $this.LoadHashTable("PdfPoolHashTable.json", [ref]$this.PdfPoolHashTable)
         $this.LoadHashTable("FilePathHashTable.json", [ref]$this.FilePathHashTable)
+        Write-Host "Exiting PC constructor"
     }
 
     # フォルダの存在確認
     [void]CheckFoldersExist() {
+        Write-Host "Entering CheckFoldersExist"
         # フォルダが存在しない場合はエラーをスロー
         if (-not (Test-Path -Path $this.WorkFolder)) {
             throw "Work folder does not exist: $($this.WorkFolder)"
@@ -58,10 +61,12 @@ class PC {
                 throw "Required folder does not exist: $folder"
             }
         }
+        Write-Host "Exiting CheckFoldersExist"
     }
 
     # ハッシュテーブルを更新
     [void]UpdateHashTable([string]$folderPath, [string]$fileExtension, [ref]$hashTable) {
+        Write-Host "Entering UpdateHashTable"
         $hashTable.Value.Clear()
         $files = Get-ChildItem -Path $folderPath -Recurse -Include $fileExtension
         $totalFiles = $files.Count
@@ -69,25 +74,29 @@ class PC {
 
         foreach ($file in $files) {
             $currentFileIndex++
-            Write-Host "Processing file $currentFileIndex of $(totalFiles): $($file.FullName)"
+            Write-Host "Processing file $currentFileIndex of $totalFiles: $($file.FullName)"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             $hashTable.Value[$file.FullName] = $hash.Hash
         }
         $this.SaveHashTable($folderPath, $hashTable)
+        Write-Host "Exiting UpdateHashTable"
     }
 
     # ハッシュテーブルをファイルに保存
     [void]SaveHashTable([string]$fileName, [ref]$hashTable) {
+        Write-Host "Entering SaveHashTable"
         if (-not (Test-Path -Path $this.WorkFolder)) {
             New-Item -Path $this.WorkFolder -ItemType Directory -Force
         }
         $json = $hashTable.Value | ConvertTo-Json
         $filePath = Join-Path -Path $this.WorkFolder -ChildPath $fileName
         $json | Out-File -FilePath $filePath -Encoding UTF8
+        Write-Host "Exiting SaveHashTable"
     }
 
     # ハッシュテーブルをファイルから読み込み
     [void]LoadHashTable([string]$fileName, [ref]$hashTable) {
+        Write-Host "Entering LoadHashTable"
         $filePath = Join-Path -Path $this.WorkFolder -ChildPath $fileName
         if (Test-Path -Path $filePath) {
             # JSON ファイルの読み込み
@@ -104,21 +113,26 @@ class PC {
         } else {
             $hashTable.Value = @{}
         }
+        Write-Host "Exiting LoadHashTable"
     }
 
     # フォルダの状態をチェック
     [bool]HasFolderChanged([string]$folderPath, [string]$fileExtension, [hashtable]$hashTable) {
+        Write-Host "Entering HasFolderChanged"
         $currentFiles = Get-ChildItem -Path $folderPath -Recurse -Include $fileExtension
         if ($currentFiles.Count -ne $hashTable.Count) {
+            Write-Host "Exiting HasFolderChanged with result: $true"
             return $true
         }
 
         foreach ($file in $currentFiles) {
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             if (-not $hashTable.ContainsKey($file.FullName) -or $hashTable[$file.FullName] -ne $hash.Hash) {
+                Write-Host "Exiting HasFolderChanged with result: $true"
                 return $true
             }
         }
+        Write-Host "Exiting HasFolderChanged with result: $false"
         return $false
     }
 }
@@ -126,6 +140,7 @@ class PC {
 # FileManagerクラスの定義
 class FileManager {
     [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$pdfFolderPath, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable) {
+        Write-Host "Entering CopyFilesBasedOnCsv"
         $successCount.Value = 0
         $failureCount.Value = 0
         $errorLogPath = Join-Path -Path $pdfFolderPath -ChildPath "error_log.txt"
@@ -174,10 +189,12 @@ class FileManager {
                 }
             }
         }
+        Write-Host "Exiting CopyFilesBasedOnCsv"
     }
 }
 
 # メイン処理
+Write-Host "Starting main script"
 $fileManager = [FileManager]::new()
 $successCount = [ref]0
 $failureCount = [ref]0
@@ -206,3 +223,4 @@ try {
 # 成功と失敗のカウントを表示
 Write-Host "Success: $($successCount.Value)"
 Write-Host "Failure: $($failureCount.Value)"
+Write-Host "Ending main script"
