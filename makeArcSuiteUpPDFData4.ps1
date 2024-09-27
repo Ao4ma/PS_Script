@@ -149,11 +149,11 @@ class FileManager {
         $errorLogPath = Join-Path -Path $pdfFolderPath -ChildPath "error_log.txt"
 
         $csvFiles = Get-ChildItem -Path $csvFolderPath | Where-Object { 
-            $_.Name -match "_個装-`?`?`?.csv" -or 
-            $_.Name -match "_図面-`?`?`?.csv" -or 
-            $_.Name -match "_通知書-`?`?`?.csv" 
+            $_.Name -match "_個装-\?\?\?.csv" -or 
+            $_.Name -match "_図面-\?\?\?.csv" -or 
+            $_.Name -match "_通知書-\?\?\?.csv" 
         }
-        
+
         foreach ($csvFile in $csvFiles) {
             $csvData = Import-Csv -Path $csvFile.FullName
             $csvFileName = [System.IO.Path]::GetFileNameWithoutExtension($csvFile.Name)
