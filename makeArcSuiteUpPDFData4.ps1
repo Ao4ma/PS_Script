@@ -65,16 +65,17 @@ class PC {
     }
 
     # ハッシュテーブルを更新
-    [void]UpdateHashTable([string]$folderPath, [string]$fileExtension, [ref]$hashTable) {
+    [void]UpdateHashTable([string]$folderPath, [string]$fileExtensions, [ref]$hashTable) {
         Write-Host "Entering UpdateHashTable"
         $hashTable.Value.Clear()
-        $files = Get-ChildItem -Path $folderPath -Recurse -Include $fileExtension
+        $extensions = $fileExtensions -split ","
+        $files = Get-ChildItem -Path $folderPath -Recurse | Where-Object { $extensions -contains $_.Extension }
         $totalFiles = $files.Count
         $currentFileIndex = 0
 
         foreach ($file in $files) {
             $currentFileIndex++
-            Write-Host "Processing file $currentFileIndex of $totalFiles: $($file.FullName)"
+            Write-Host "Processing file $currentFileIndex of $($totalFiles): $($file.FullName)"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             $hashTable.Value[$file.FullName] = $hash.Hash
         }
@@ -90,6 +91,7 @@ class PC {
         }
         $json = $hashTable.Value | ConvertTo-Json
         $filePath = Join-Path -Path $this.WorkFolder -ChildPath $fileName
+        Write-Host "Saving hash table to: $filePath"
         $json | Out-File -FilePath $filePath -Encoding UTF8
         Write-Host "Exiting SaveHashTable"
     }
@@ -117,9 +119,10 @@ class PC {
     }
 
     # フォルダの状態をチェック
-    [bool]HasFolderChanged([string]$folderPath, [string]$fileExtension, [hashtable]$hashTable) {
+    [bool]HasFolderChanged([string]$folderPath, [string]$fileExtensions, [hashtable]$hashTable) {
         Write-Host "Entering HasFolderChanged"
-        $currentFiles = Get-ChildItem -Path $folderPath -Recurse -Include $fileExtension
+        $extensions = $fileExtensions -split ","
+        $currentFiles = Get-ChildItem -Path $folderPath -Recurse | Where-Object { $extensions -contains $_.Extension }
         if ($currentFiles.Count -ne $hashTable.Count) {
             Write-Host "Exiting HasFolderChanged with result: $true"
             return $true
