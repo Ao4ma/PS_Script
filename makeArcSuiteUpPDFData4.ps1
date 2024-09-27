@@ -149,7 +149,7 @@ class FileManager {
         $errorLogPath = Join-Path -Path $pdfFolderPath -ChildPath "error_log.txt"
 
         $csvFiles = Get-ChildItem -Path $csvFolderPath | Where-Object { 
-            $_.Name -match "_(個装|図面|通知書)-\d{3}\.csv" 
+            $_.Name -match "_(個装|図面|通知書)*-\d{3}\.csv" 
         }
 
         foreach ($csvFile in $csvFiles) {
