@@ -48,12 +48,6 @@ class PC {
         $this.LoadHashTable("FilePathHashTable.json", [ref]$this.FilePathHashTable)
         $this.LoadHashTable("PdfFilePathMap.json", [ref]$this.PdfFilePathMap)
 
-        # 連想配列のファイルが存在しない場合はハッシュテーブルを再構築
-      #  if (-not (Test-Path -Path (Join-Path -Path $this.WorkFolder -ChildPath "PdfFilePathMap.json"))) {
-      #      Write-Host "PdfFilePathMap.json not found, rebuilding PdfPoolHashTable"
-      #      $this.UpdateHashTable($this.PdfPoolFolderPath, "*.pdf, *.txt", [ref]$this.PdfPoolHashTable)
-      #  }
-
         Write-Host "Exiting PC constructor"
     }
 
@@ -78,12 +72,8 @@ class PC {
     [void]UpdateHashTable([string]$folderPath, [string]$fileExtensions, [ref]$hashTable) {
         Write-Host "Entering UpdateHashTable"
         $hashTable.Value.Clear()
-        if ($folderPath -eq $this.PdfPoolFolderPath) {
-            $this.PdfFilePathMap.Clear()  # 新しい連想配列のクリア
-        }
         $extensions = $fileExtensions -split "," | ForEach-Object { "*$($_.TrimStart('*'))" }
-        $files = Get-ChildItem -Path $folderPath -Recurse | Where-Object { -not $_.PSIsContainer -and ($ext = $_.Extension; $extensions | ForEach-Object { $ext -like $_ }) }
-#        $files = Get-ChildItem -Path $folderPath -Recurse | Where-Object { $ext = $_.Extension; $extensions | ForEach-Object { $ext -like $_ } }
+        $files = Get-ChildItem -Path $folderPath -Recurse | Where-Object { -not $_.PSIsContainer -and ($ext = $_.Extension; $extensions | ForEach-Object { $ext -like $_ }) -contains $true }
         $totalFiles = $files.Count
         $currentFileIndex = 0
 
@@ -112,7 +102,6 @@ class PC {
         }
         $json = $hashTable.Value | ConvertTo-Json
         $filePath = Join-Path -Path $this.WorkFolder -ChildPath $fileName
-        Write-Host "Saving hash table to: $filePath"
         $json | Out-File -FilePath $filePath -Encoding UTF8
         Write-Host "Exiting SaveHashTable"
     }
@@ -133,8 +122,6 @@ class PC {
             foreach ($key in $psCustomObject.PSObject.Properties.Name) {
                 $hashTable.Value[$key] = $psCustomObject.$key
             }
-        } else {
-            $hashTable.Value = @{}
         }
         Write-Host "Exiting LoadHashTable"
     }
@@ -143,8 +130,7 @@ class PC {
     [bool]HasFolderChanged([string]$folderPath, [string]$fileExtensions, [hashtable]$hashTable) {
         Write-Host "Entering HasFolderChanged"
         $extensions = $fileExtensions -split ","  | ForEach-Object { "*$($_.TrimStart('*'))" }
-        $currentFiles = Get-ChildItem -Path $folderPath -Recurse | Where-Object { -not $_.PSIsContainer -and ($ext = $_.Extension; $extensions | ForEach-Object { $ext -like $_ }) }
-#        $currentFiles = Get-ChildItem -Path $folderPath -Recurse | Where-Object { $ext = $_.Extension; $extensions | ForEach-Object { $ext -like $_ } }
+        $currentFiles = Get-ChildItem -Path $folderPath -Recurse | Where-Object { -not $_.PSIsContainer -and ($ext = $_.Extension; $extensions | ForEach-Object { $ext -like $_ }) -contains $true }
         if ($currentFiles.Count -ne $hashTable.Count) {
             Write-Host "Exiting HasFolderChanged with result: $true"
             return $true
@@ -161,7 +147,6 @@ class PC {
         return $false
     }
 }
-
 
 # FileManagerクラスの定義
 class FileManager {
