@@ -76,7 +76,11 @@ class PC {
             $this.PdfFilePathMap.Clear()  # 新しい連想配列のクリア
         }
         $extensions = $fileExtensions -split "," | ForEach-Object { "*$($_.TrimStart('*'))" }
-        $files = Get-ChildItem -Path $folderPath -Recurse | Where-Object { -not $_.PSIsContainer -and ($ext = $_.Extension; $extensions | ForEach-Object { $ext -like $_ }) }
+        $files = Get-ChildItem -Path $folderPath -Recurse | 
+            Where-Object { 
+                -not $_.PSIsContainer -and ($ext = $_.Extension); 
+                ($extensions | ForEach-Object { $ext -like $_ }) -contains $true 
+            }
         $totalFiles = $files.Count
         $currentFileIndex = 0
 
@@ -136,7 +140,9 @@ class PC {
     [bool]HasFolderChanged([string]$folderPath, [string]$fileExtensions, [hashtable]$hashTable) {
         Write-Host "Entering HasFolderChanged"
         $extensions = $fileExtensions -split ","  | ForEach-Object { "*$($_.TrimStart('*'))" }
-        $currentFiles = Get-ChildItem -Path $folderPath -Recurse | Where-Object { -not $_.PSIsContainer -and ($ext = $_.Extension; $extensions | ForEach-Object { $ext -like $_ }) }
+        $currentFiles = Get-ChildItem -Path $folderPath -Recurse | 
+                Where-Object { -not $_.PSIsContainer -and ($ext = $_.Extension);
+                                     ($extensions | ForEach-Object { $ext -like $_ }) }
         if ($currentFiles.Count -ne $hashTable.Count) {
             Write-Host "Exiting HasFolderChanged with result: $true"
             return $true
