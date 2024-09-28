@@ -43,9 +43,10 @@ class PC {
         # フォルダの存在確認
         $this.CheckFoldersExist()
 
-        # ハッシュテーブルの読み込み
+        # ハッシュテーブルと連想配列の読み込み
         $this.LoadHashTable("PdfPoolHashTable.json", [ref]$this.PdfPoolHashTable)
         $this.LoadHashTable("FilePathHashTable.json", [ref]$this.FilePathHashTable)
+        $this.LoadHashTable("PdfFilePathMap.json", [ref]$this.PdfFilePathMap)
         Write-Host "Exiting PC constructor"
     }
 
@@ -66,7 +67,7 @@ class PC {
         Write-Host "Exiting CheckFoldersExist"
     }
 
-    # ハッシュテーブルを更新
+    # ハッシュテーブルと連想配列を更新
     [void]UpdateHashTable([string]$folderPath, [string]$fileExtensions, [ref]$hashTable) {
         Write-Host "Entering UpdateHashTable"
         $hashTable.Value.Clear()
@@ -84,11 +85,12 @@ class PC {
             $fileName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
             $this.PdfFilePathMap[$fileName] = $file.FullName  # 新しい連想配列に追加
         }
-        $this.SaveHashTable($folderPath, $hashTable)
+        $this.SaveHashTable("PdfPoolHashTable.json", [ref]$this.PdfPoolHashTable)
+        $this.SaveHashTable("PdfFilePathMap.json", [ref]$this.PdfFilePathMap)
         Write-Host "Exiting UpdateHashTable"
     }
 
-    # ハッシュテーブルをファイルに保存
+    # ハッシュテーブルと連想配列をファイルに保存
     [void]SaveHashTable([string]$fileName, [ref]$hashTable) {
         Write-Host "Entering SaveHashTable"
         if (-not (Test-Path -Path $this.WorkFolder)) {
@@ -101,7 +103,7 @@ class PC {
         Write-Host "Exiting SaveHashTable"
     }
 
-    # ハッシュテーブルをファイルから読み込み
+    # ハッシュテーブルと連想配列をファイルから読み込み
     [void]LoadHashTable([string]$fileName, [ref]$hashTable) {
         Write-Host "Entering LoadHashTable"
         $filePath = Join-Path -Path $this.WorkFolder -ChildPath $fileName
@@ -144,6 +146,7 @@ class PC {
         return $false
     }
 }
+
 
 # FileManagerクラスの定義
 class FileManager {
