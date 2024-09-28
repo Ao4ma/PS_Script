@@ -8,6 +8,7 @@ class PC {
     [string]$PdfFolderPath
     [hashtable]$PdfPoolHashTable
     [hashtable]$FilePathHashTable
+    [hashtable]$PdfFilePathMap  # 新しい連想配列
 
     # コンストラクタ
     PC() {
@@ -37,6 +38,7 @@ class PC {
         $this.PdfFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdfデータ"
         $this.PdfPoolHashTable = @{}
         $this.FilePathHashTable = @{}
+        $this.PdfFilePathMap = @{}  # 新しい連想配列の初期化
 
         # フォルダの存在確認
         $this.CheckFoldersExist()
@@ -68,6 +70,7 @@ class PC {
     [void]UpdateHashTable([string]$folderPath, [string]$fileExtensions, [ref]$hashTable) {
         Write-Host "Entering UpdateHashTable"
         $hashTable.Value.Clear()
+        $this.PdfFilePathMap.Clear()  # 新しい連想配列のクリア
         $extensions = $fileExtensions -split ","
         $files = Get-ChildItem -Path $folderPath -Recurse | Where-Object { $extensions -contains $_.Extension }
         $totalFiles = $files.Count
@@ -78,6 +81,8 @@ class PC {
             Write-Host "Processing file $currentFileIndex of $($totalFiles): $($file.FullName)"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             $hashTable.Value[$file.FullName] = $hash.Hash
+            $fileName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+            $this.PdfFilePathMap[$fileName] = $file.FullName  # 新しい連想配列に追加
         }
         $this.SaveHashTable($folderPath, $hashTable)
         Write-Host "Exiting UpdateHashTable"
@@ -149,7 +154,7 @@ class FileManager {
         $errorLogPath = Join-Path -Path $pdfFolderPath -ChildPath "error_log.txt"
 
         $csvFiles = Get-ChildItem -Path $csvFolderPath | Where-Object { 
-            $_.Name -match "_(個装|図面|通知書).*-\d{3}\.csv" 
+            $_.Name -match "_(個装|図面|通知書)-\d{3}\.csv" 
         }
 
         foreach ($csvFile in $csvFiles) {
@@ -164,8 +169,9 @@ class FileManager {
 
             foreach ($row in $csvData) {
                 $fileName = $row.'関連付け用ファイル名'
-                $pdfFilePath = Join-Path -Path $pdfPoolFolderPath -ChildPath "$fileName.pdf"
-                $txtFilePath = Join-Path -Path $pdfPoolFolderPath -ChildPath "$fileName.txt"
+                $subFolderPath = Join-Path -Path $pdfPoolFolderPath -ChildPath $fileName
+                $pdfFilePath = Join-Path -Path $subFolderPath -ChildPath "$fileName.pdf"
+                $txtFilePath = Join-Path -Path $subFolderPath -ChildPath "$fileName.txt"
 
                 $sourceFilePath = if (Test-Path $pdfFilePath) { $pdfFilePath } elseif (Test-Path $txtFilePath) { $txtFilePath } else { $null }
 
