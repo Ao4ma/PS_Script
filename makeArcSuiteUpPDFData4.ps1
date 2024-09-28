@@ -72,6 +72,9 @@ class PC {
     [void]UpdateHashTable([string]$folderPath, [string]$fileExtensions, [ref]$hashTable) {
         Write-Host "Entering UpdateHashTable"
         $hashTable.Value.Clear()
+        if ($folderPath -eq $this.PdfPoolFolderPath) {
+            $this.PdfFilePathMap.Clear()  # 新しい連想配列のクリア
+        }
         $extensions = $fileExtensions -split "," | ForEach-Object { "*$($_.TrimStart('*'))" }
         $files = Get-ChildItem -Path $folderPath -Recurse | Where-Object { -not $_.PSIsContainer -and ($ext = $_.Extension; $extensions | ForEach-Object { $ext -like $_ }) -contains $true }
         $totalFiles = $files.Count
@@ -102,6 +105,7 @@ class PC {
         }
         $json = $hashTable.Value | ConvertTo-Json
         $filePath = Join-Path -Path $this.WorkFolder -ChildPath $fileName
+        Write-Host "Saving hash table to: $filePath"
         $json | Out-File -FilePath $filePath -Encoding UTF8
         Write-Host "Exiting SaveHashTable"
     }
@@ -122,6 +126,8 @@ class PC {
             foreach ($key in $psCustomObject.PSObject.Properties.Name) {
                 $hashTable.Value[$key] = $psCustomObject.$key
             }
+        } else {
+            $hashTable.Value = @{}
         }
         Write-Host "Exiting LoadHashTable"
     }
