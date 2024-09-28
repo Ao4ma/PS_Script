@@ -49,10 +49,10 @@ class PC {
         $this.LoadHashTable("PdfFilePathMap.json", [ref]$this.PdfFilePathMap)
 
         # 連想配列のファイルが存在しない場合はハッシュテーブルを再構築
-        if (-not (Test-Path -Path (Join-Path -Path $this.WorkFolder -ChildPath "PdfFilePathMap.json"))) {
-            Write-Host "PdfFilePathMap.json not found, rebuilding PdfPoolHashTable"
-            $this.UpdateHashTable($this.PdfPoolFolderPath, "*.pdf, *.txt", [ref]$this.PdfPoolHashTable)
-        }
+      #  if (-not (Test-Path -Path (Join-Path -Path $this.WorkFolder -ChildPath "PdfFilePathMap.json"))) {
+      #      Write-Host "PdfFilePathMap.json not found, rebuilding PdfPoolHashTable"
+      #      $this.UpdateHashTable($this.PdfPoolFolderPath, "*.pdf, *.txt", [ref]$this.PdfPoolHashTable)
+      #  }
 
         Write-Host "Exiting PC constructor"
     }
@@ -81,7 +81,7 @@ class PC {
         if ($folderPath -eq $this.PdfPoolFolderPath) {
             $this.PdfFilePathMap.Clear()  # 新しい連想配列のクリア
         }
-        $extensions = $fileExtensions -split ","
+        $extensions = $fileExtensions -split "," | ForEach-Object { "*$($_.TrimStart('*'))" }
         $files = Get-ChildItem -Path $folderPath -Recurse | Where-Object { $extensions -contains $_.Extension }
         $totalFiles = $files.Count
         $currentFileIndex = 0
@@ -141,7 +141,7 @@ class PC {
     # フォルダの状態をチェック
     [bool]HasFolderChanged([string]$folderPath, [string]$fileExtensions, [hashtable]$hashTable) {
         Write-Host "Entering HasFolderChanged"
-        $extensions = $fileExtensions -split ","
+        $extensions = $fileExtensions -split ","  | ForEach-Object { "*$($_.TrimStart('*'))" }
         $currentFiles = Get-ChildItem -Path $folderPath -Recurse | Where-Object { $extensions -contains $_.Extension }
         if ($currentFiles.Count -ne $hashTable.Count) {
             Write-Host "Exiting HasFolderChanged with result: $true"
@@ -229,9 +229,11 @@ $failureCount = [ref]0
 # PCオブジェクトの作成
 $pc = [PC]::new()
 
-# PDFプールフォルダの状態をチェックし、変化があればハッシュテーブルを更新
+# PDFプールフォルダの状態をチェックし、変化があればハッシュテーブルと連想配列を更新
 if ($pc.HasFolderChanged($pc.PdfPoolFolderPath, "*.pdf, *.txt", $pc.PdfPoolHashTable)) {
     $pc.UpdateHashTable($pc.PdfPoolFolderPath, "*.pdf, *.txt", [ref]$pc.PdfPoolHashTable)
+} else {
+    $pc.LoadHashTable("PdfFilePathMap.json", [ref]$pc.PdfFilePathMap)
 }
 
 # ファイルパスの状態をチェックし、変化があればハッシュテーブルを更新
