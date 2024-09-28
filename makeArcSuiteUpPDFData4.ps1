@@ -47,6 +47,13 @@ class PC {
         $this.LoadHashTable("PdfPoolHashTable.json", [ref]$this.PdfPoolHashTable)
         $this.LoadHashTable("FilePathHashTable.json", [ref]$this.FilePathHashTable)
         $this.LoadHashTable("PdfFilePathMap.json", [ref]$this.PdfFilePathMap)
+
+        # 連想配列のファイルが存在しない場合はハッシュテーブルを再構築
+        if (-not (Test-Path -Path (Join-Path -Path $this.WorkFolder -ChildPath "PdfFilePathMap.json"))) {
+            Write-Host "PdfFilePathMap.json not found, rebuilding PdfPoolHashTable"
+            $this.UpdateHashTable($this.PdfPoolFolderPath, "*.pdf, *.txt", [ref]$this.PdfPoolHashTable)
+        }
+
         Write-Host "Exiting PC constructor"
     }
 
@@ -71,7 +78,9 @@ class PC {
     [void]UpdateHashTable([string]$folderPath, [string]$fileExtensions, [ref]$hashTable) {
         Write-Host "Entering UpdateHashTable"
         $hashTable.Value.Clear()
-        $this.PdfFilePathMap.Clear()  # 新しい連想配列のクリア
+        if ($folderPath -eq $this.PdfPoolFolderPath) {
+            $this.PdfFilePathMap.Clear()  # 新しい連想配列のクリア
+        }
         $extensions = $fileExtensions -split ","
         $files = Get-ChildItem -Path $folderPath -Recurse | Where-Object { $extensions -contains $_.Extension }
         $totalFiles = $files.Count
@@ -82,11 +91,15 @@ class PC {
             Write-Host "Processing file $currentFileIndex of $($totalFiles): $($file.FullName)"
             $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
             $hashTable.Value[$file.FullName] = $hash.Hash
-            $fileName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
-            $this.PdfFilePathMap[$fileName] = $file.FullName  # 新しい連想配列に追加
+            if ($folderPath -eq $this.PdfPoolFolderPath) {
+                $fileName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+                $this.PdfFilePathMap[$fileName] = $file.FullName  # 新しい連想配列に追加
+            }
         }
         $this.SaveHashTable("PdfPoolHashTable.json", [ref]$this.PdfPoolHashTable)
-        $this.SaveHashTable("PdfFilePathMap.json", [ref]$this.PdfFilePathMap)
+        if ($folderPath -eq $this.PdfPoolFolderPath) {
+            $this.SaveHashTable("PdfFilePathMap.json", [ref]$this.PdfFilePathMap)
+        }
         Write-Host "Exiting UpdateHashTable"
     }
 
