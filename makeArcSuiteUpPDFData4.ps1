@@ -71,6 +71,15 @@ class PC {
     # ハッシュテーブルと連想配列を更新
     [void]UpdateHashTable([string]$folderPath, [string]$fileExtensions, [ref]$hashTable) {
         Write-Host "Entering UpdateHashTable"
+        
+        # 確認メッセージを表示
+        $confirmation = Read-Host "Do you want to initialize the hash table? (yes/no)"
+        if ($confirmation -ne "yes") {
+            Write-Host "Hash table initialization canceled."
+            Write-Host "Exiting UpdateHashTable"
+            return
+        }
+
         $hashTable.Value.Clear()
         if ($folderPath -eq $this.PdfPoolFolderPath) {
             $this.PdfFilePathMap.Clear()  # 新しい連想配列のクリア
@@ -143,7 +152,7 @@ class PC {
         $currentFiles = Get-ChildItem -Path $folderPath -Recurse | 
                 Where-Object { -not $_.PSIsContainer -and ($ext = $_.Extension);
                                      ($extensions | ForEach-Object { $ext -like $_ }) }
-        if ($currentFiles.Count -ne $hashTable.Count) {
+        if ($currentFiles.Count -ne $hashTable.Keys.Count) {
             Write-Host "Exiting HasFolderChanged with result: $true"
             return $true
         }
