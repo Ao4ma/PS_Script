@@ -85,7 +85,7 @@ class PC {
             $this.PdfFilePathMap.Clear()  # 新しい連想配列のクリア
         }
         $extensions = $fileExtensions -split "," | ForEach-Object { "*$($_.TrimStart('*'))" }
-        $files = Get-ChildItem -Path $folderPath -Recurse | 
+        $files = Get-ChildItem -Path $folderPath -Recurse -File | 
             Where-Object { 
                 -not $_.PSIsContainer -and ($ext = $_.Extension); 
                 ($extensions | ForEach-Object { $ext -like $_ }) -contains $true 
@@ -106,7 +106,7 @@ class PC {
             # バッチサイズごとに処理を一時停止
             if ($currentFileIndex % $batchSize -eq 0) {
                 Write-Host "Processed $currentFileIndex files. Pausing for a moment..."
-                Start-Sleep -Seconds 1
+                Start-Sleep -Seconds 2
             }
         }
         $this.SaveHashTable("PdfPoolHashTable.json", [ref]$this.PdfPoolHashTable)
