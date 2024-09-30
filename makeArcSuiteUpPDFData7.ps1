@@ -40,6 +40,102 @@ class PC {
         $this.FilePathHashTable = @{}
         $this.PdfFilePathMap = [System.Collections.Hashtable]::new([System.StringComparer]::OrdinalIgnoreCase)  # 大文字小文字を無視する連想配列の初期化
     }
+
+    # ハッシュテーブルと連想配列を更新
+    [void]UpdateHashTable([string]$folderPath, [string]$fileExtensions, [ref]$hashTable, [int]$batchSize = 1000) {
+        Write-Host "Entering UpdateHashTable"
+        
+        # 確認メッセージを表示
+        $confirmation = Read-Host "Do you want to initialize the hash table? (yes/no) [default: yes]"
+        if ([string]::IsNullOrWhiteSpace($confirmation) -or $confirmation -eq "yes") {
+            $confirmation = "yes"
+        }
+
+        if ($confirmation -ne "yes") {
+            Write-Host "Hash table initialization canceled."
+            Write-Host "Exiting UpdateHashTable"
+            return
+        }
+
+        $hashTable.Value.Clear()
+        if ($folderPath -eq $this.PdfPoolFolderPath) {
+            $this.PdfFilePathMap.Clear()  # 新しい連想配列のクリア
+        }
+        $extensions = $fileExtensions -split "," | ForEach-Object { "*$($_.TrimStart('*'))" }
+        $files = Get-ChildItem -Path $folderPath -Recurse -File | 
+            Where-Object { 
+                ($ext = $_.Extension); 
+                ($extensions | ForEach-Object { $ext -like $_ }) -contains $true 
+            }
+        $totalFiles = $files.Count
+        $currentFileIndex = 0
+
+        foreach ($file in $files) {
+            $currentFileIndex++
+            Write-Host "Processing file $currentFileIndex of $($totalFiles): $($file.FullName)"
+            $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
+            $hashTable.Value[$file.FullName] = $hash.Hash
+            if ($folderPath -eq $this.PdfPoolFolderPath) {
+                $fileName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+                $this.PdfFilePathMap[$fileName] = $file.FullName  # 新しい連想配列に追加
+            }
+
+            # バッチサイズごとに処理を一時停止
+            if ($currentFileIndex % $batchSize -eq 0) {
+                Write-Host "Processed $currentFileIndex files. Pausing for a moment..."
+                Start-Sleep -Seconds 2
+            }
+        }
+
+        # ハッシュテーブルを保存
+        if ($folderPath -eq $this.PdfPoolFolderPath) {
+            $this.SaveHashTable("PdfPoolHashTable.json", [ref]$this.PdfPoolHashTable)
+            $this.SaveHashTable("PdfFilePathMap.json", [ref]$this.PdfFilePathMap)
+        } elseif ($folderPath -eq $this.CsvFolderPath) {
+            $this.SaveHashTable("FilePathHashTable.json", [ref]$this.FilePathHashTable)
+        }
+        
+        Write-Host "Exiting UpdateHashTable"
+    }
+
+    # ハッシュテーブルを保存
+    [void]SaveHashTable([string]$fileName, [ref]$hashTable) {
+        Write-Host "Entering SaveHashTable"
+        $json = $hashTable.Value | ConvertTo-Json -Compress
+        Set-Content -Path $fileName -Value $json -Encoding UTF8
+        Write-Host "Exiting SaveHashTable"
+    }
+
+    # ハッシュテーブルを読み込み
+    [void]LoadHashTable([string]$fileName, [ref]$hashTable, [int]$batchSize = 1000) {
+        Write-Host "Entering LoadHashTable"
+        if (Test-Path -Path $fileName) {
+            $json = Get-Content -Path $fileName -Encoding UTF8 | Out-String
+            $hashTable.Value = $json | ConvertFrom-Json
+        }
+        Write-Host "Exiting LoadHashTable"
+    }
+
+    # フォルダの変更をチェック
+    [bool]HasFolderChanged([string]$folderPath, [string]$fileExtensions, [hashtable]$hashTable) {
+        Write-Host "Entering HasFolderChanged"
+        $extensions = $fileExtensions -split "," | ForEach-Object { "*$($_.TrimStart('*'))" }
+        $files = Get-ChildItem -Path $folderPath -Recurse -File | 
+            Where-Object { 
+                ($ext = $_.Extension); 
+                ($extensions | ForEach-Object { $ext -like $_ }) -contains $true 
+            }
+
+        foreach ($file in $files) {
+            $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
+            if (-not $hashTable.ContainsKey($file.FullName) -or $hashTable[$file.FullName] -ne $hash.Hash) {
+                Write-Host "Exiting HasFolderChanged with result: $true"
+                return $true
+            }
+        }
+        Write-Host "Exiting HasFolderChanged with result: $false"
+        return $false
+    }
 }
 
 class FileManager {

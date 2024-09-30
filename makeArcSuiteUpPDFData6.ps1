@@ -38,7 +38,6 @@ class PC {
         $this.PdfFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdfデータ"
         $this.PdfPoolHashTable = @{}
         $this.FilePathHashTable = @{}
-     #   $this.PdfFilePathMap = @{}  # 新しい連想配列の初期化
         $this.PdfFilePathMap = [System.Collections.Hashtable]::new([System.StringComparer]::OrdinalIgnoreCase)  # 大文字小文字を無視する連想配列の初期化
 
 
@@ -257,6 +256,38 @@ class FileManager {
                     Write-Host $errorMessage
                     $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
                     $failureCount.Value++
+                }
+
+                # 行データに「廃」が含まれている場合の処理
+                if ($row -match "廃") {
+                    $txtFileName = "$fileName.txt"
+                    if ($pdfFilePathMap.ContainsKey($txtFileName)) {
+                        $txtFilePath = $pdfFilePathMap[$txtFileName]
+                        if (Test-Path $txtFilePath) {
+                            $haiFolder = Join-Path -Path $pdfFolderPath -ChildPath "廃図"
+                            if (-not (Test-Path -Path $haiFolder)) {
+                                New-Item -Path $haiFolder -ItemType Directory -Force
+                            }
+                            $destinationTxtFilePath = Join-Path -Path $haiFolder -ChildPath (Get-Item $txtFilePath).Name
+                            Write-Host "Copying file: $txtFilePath to $destinationTxtFilePath"
+                            try {
+                                Copy-Item -Path $txtFilePath -Destination $destinationTxtFilePath -ErrorAction Stop
+                                Write-Host "Successfully copied: $txtFilePath"
+                            } catch {
+                                $errorMessage = "Failed to copy $txtFilePath to $destinationTxtFilePath. Error: $_"
+                                Write-Host $errorMessage
+                                $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+                            }
+                        } else {
+                            $errorMessage = "TXT file not found: $txtFilePath"
+                            Write-Host $errorMessage
+                            $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+                        }
+                    } else {
+                        $errorMessage = "TXT file not found in PdfFilePathMap: $txtFileName"
+                        Write-Host $errorMessage
+                        $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+                    }
                 }
             }
         }
