@@ -192,13 +192,7 @@ class PC {
 
 # FileManagerクラスの定義
 class FileManager {
-    [hashtable]$PdfFilePathMap
-
-    FileManager() {
-        $this.PdfFilePathMap = @{}
-    }
-
-    [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$pdfFolderPath, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable) {
+    [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$pdfFolderPath, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable, [hashtable]$pdfFilePathMap) {
         Write-Host "Entering CopyFilesBasedOnCsv"
         $successCount.Value = 0
         $failureCount.Value = 0
@@ -215,8 +209,8 @@ class FileManager {
                 $fileName = $row.'関連付け用ファイル名'.Trim()
                 
                 # pdfFilePathMap からフルパスを取得
-                if ($this.PdfFilePathMap.ContainsKey($fileName)) {
-                    $pdfFilePath = $this.PdfFilePathMap[$fileName]
+                if ($pdfFilePathMap.ContainsKey($fileName)) {
+                    $pdfFilePath = $pdfFilePathMap[$fileName]
                 } else {
                     $pdfFilePath = $null
                     $errorMessage = "Source file not found in PdfFilePathMap: $fileName"
