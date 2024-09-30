@@ -146,7 +146,7 @@ class FileManager {
         $errorLogPath = Join-Path -Path $pdfFolderPath -ChildPath "error_log.txt"
 
         $csvFiles = Get-ChildItem -Path $csvFolderPath | Where-Object { 
-            $_.Name -match "_(個装|図面|通知書)-\d{3}\.csv" 
+            $_.Name -match "_(個装|図面|通知書).*-\d{3}\.csv" 
         }
 
         foreach ($csvFile in $csvFiles) {
@@ -207,10 +207,10 @@ class FileManager {
                 }
 
                 # 行データに「廃」が含まれている場合の処理
-                if ($row -match "廃") {
+                if ($row -like "*廃*") {
                     $txtFileName = "$fileName.txt"
-                    if ($pdfFilePathMap.ContainsKey($txtFileName)) {
-                        $txtFilePath = $pdfFilePathMap[$txtFileName]
+                    if ($pdfFilePathMap.ContainsKey($fileName)) {
+                        $txtFilePath = $pdfFilePathMap[$fileName]
                         if (Test-Path $txtFilePath) {
                             $haiFolder = Join-Path -Path $pdfFolderPath -ChildPath "廃図"
                             if (-not (Test-Path -Path $haiFolder)) {
@@ -243,6 +243,7 @@ class FileManager {
         Write-Host "Exiting CopyFilesBasedOnCsv"
     }
 }
+
 
 # メイン処理
 Write-Host "Starting main script"
@@ -281,3 +282,4 @@ try {
 Write-Host "Success: $($successCount.Value)"
 Write-Host "Failure: $($failureCount.Value)"
 Write-Host "Ending main script"
+
