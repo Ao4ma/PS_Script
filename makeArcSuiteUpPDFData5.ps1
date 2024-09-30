@@ -267,6 +267,9 @@ $failureCount = [ref]0
 # PCオブジェクトの作成
 $pc = [PC]::new()
 
+# エラーログのパスを定義
+$errorLogPath = Join-Path -Path $pc.PdfFolderPath -ChildPath "error_log.txt"
+
 # PDFプールフォルダの状態をチェックし、変化があればハッシュテーブルと連想配列を更新
 if ($pc.HasFolderChanged($pc.PdfPoolFolderPath, "*.pdf, *.txt", $pc.PdfPoolHashTable)) {
     $pc.UpdateHashTable($pc.PdfPoolFolderPath, "*.pdf, *.txt", [ref]$pc.PdfPoolHashTable, 1000)
@@ -281,7 +284,7 @@ if ($pc.HasFolderChanged($pc.CsvFolderPath, "*.csv", $pc.FilePathHashTable)) {
 
 # ファイルコピー処理の実行
 try {
-    $fileManager.CopyFilesBasedOnCsv($pc.CsvFolderPath, $pc.PdfPoolFolderPath, $pc.PdfFolderPath, [ref]$successCount, [ref]$failureCount, $pc.PdfPoolHashTable)
+    $fileManager.CopyFilesBasedOnCsv($pc.CsvFolderPath, $pc.PdfPoolFolderPath, $pc.PdfFolderPath, [ref]$successCount, [ref]$failureCount, $pc.PdfPoolHashTable, $pc.PdfFilePathMap)
 } catch {
     Write-Host "An error occurred: $_"
     $errorMessage = "An error occurred during file copy. Error: $_"
