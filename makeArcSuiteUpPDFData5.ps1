@@ -217,11 +217,22 @@ class FileManager {
                     $pdfFilePath = $this.PdfFilePathMap[$fileName]
                 } else {
                     $pdfFilePath = $null
+                    $errorMessage = "Source file not found in PdfFilePathMap: $fileName"
+                    Write-Host $errorMessage
+                    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+                    $failureCount.Value++
+                    continue
                 }
             
                 $txtFilePath = if ($pdfFilePath) { [System.IO.Path]::ChangeExtension($pdfFilePath, ".txt") } else { $null }
             
-                $sourceFilePath = if (Test-Path $pdfFilePath) { $pdfFilePath } elseif (Test-Path $txtFilePath) { $txtFilePath } else { $null }
+                $sourceFilePath = if ($pdfFilePath -and (Test-Path $pdfFilePath)) { 
+                    $pdfFilePath 
+                } elseif ($txtFilePath -and (Test-Path $txtFilePath)) { 
+                    $txtFilePath 
+                } else { 
+                    $null 
+                }
             
                 if ($sourceFilePath -and $pdfPoolHashTable.ContainsKey($sourceFilePath)) {
                     $destinationFilePath = Join-Path -Path $pdfFolderPath -ChildPath (Get-Item $sourceFilePath).Name
