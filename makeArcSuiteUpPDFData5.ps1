@@ -190,6 +190,12 @@ class PC {
 
 # FileManagerクラスの定義
 class FileManager {
+    [hashtable]$PdfFilePathMap
+
+    FileManager() {
+        $this.PdfFilePathMap = @{}
+    }
+
     [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$pdfFolderPath, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable) {
         Write-Host "Entering CopyFilesBasedOnCsv"
         $successCount.Value = 0
@@ -227,7 +233,7 @@ class FileManager {
                         $successCount.Value++
                         Write-Host "Successfully copied: $sourceFilePath"
                     } catch {
-                        $errorMessage = "Failed to copy $sourceFilePath to $destinationFilePath"
+                        $errorMessage = "Failed to copy $sourceFilePath to $destinationFilePath. Error: $_"
                         Write-Host $errorMessage
                         $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
                         $failureCount.Value++
@@ -271,7 +277,8 @@ try {
     $fileManager.CopyFilesBasedOnCsv($pc.CsvFolderPath, $pc.PdfPoolFolderPath, $pc.PdfFolderPath, [ref]$successCount, [ref]$failureCount, $pc.PdfPoolHashTable)
 } catch {
     Write-Host "An error occurred: $_"
-    break  # エラーが発生した場合にスクリプトを停止
+    $errorMessage = "An error occurred during file copy. Error: $_"
+    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
 }
 
 # 成功と失敗のカウントを表示
