@@ -231,7 +231,13 @@ class FileManager {
                 }
             
                 if ($sourceFilePath -and $pdfPoolHashTable.ContainsKey($sourceFilePath)) {
-                    $destinationFilePath = Join-Path -Path $pdfFolderPath -ChildPath (Get-Item $sourceFilePath).Name
+                    # 関連付けファイル名をフォルダ名とするフォルダを作成
+                    $fileFolder = Join-Path -Path $pdfFolderPath -ChildPath $fileName
+                    if (-not (Test-Path -Path $fileFolder)) {
+                        New-Item -Path $fileFolder -ItemType Directory -Force
+                    }
+
+                    $destinationFilePath = Join-Path -Path $fileFolder -ChildPath (Get-Item $sourceFilePath).Name
             
                     Write-Host "Copying file: $sourceFilePath to $destinationFilePath"
             
