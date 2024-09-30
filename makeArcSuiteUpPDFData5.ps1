@@ -87,7 +87,7 @@ class PC {
         $extensions = $fileExtensions -split "," | ForEach-Object { "*$($_.TrimStart('*'))" }
         $files = Get-ChildItem -Path $folderPath -Recurse -File | 
             Where-Object { 
-                -not $_.PSIsContainer -and ($ext = $_.Extension); 
+                ($ext = $_.Extension); 
                 ($extensions | ForEach-Object { $ext -like $_ }) -contains $true 
             }
         $totalFiles = $files.Count
@@ -127,7 +127,7 @@ class PC {
         if (-not (Test-Path -Path $this.WorkFolder)) {
             New-Item -Path $this.WorkFolder -ItemType Directory -Force
         }
-        $json = $hashTable.Value | ConvertTo-Json
+        $json = $hashTable.Value | ConvertTo-Json -Depth 10
         $filePath = Join-Path -Path $this.WorkFolder -ChildPath $fileName
         Write-Host "Saving hash table to: $filePath"
         $json | Out-File -FilePath $filePath -Encoding UTF8
@@ -202,27 +202,26 @@ class FileManager {
 
         foreach ($csvFile in $csvFiles) {
             $csvData = Import-Csv -Path $csvFile.FullName
-            $csvFileName = [System.IO.Path]::GetFileNameWithoutExtension($csvFile.Name)
-            $csvDestinationFolder = Join-Path -Path $pdfFolderPath -ChildPath $csvFileName
-
-            # CSVファイル名のフォルダを作成
-            if (-not (Test-Path -Path $csvDestinationFolder)) {
-                New-Item -Path $csvDestinationFolder -ItemType Directory
-            }
 
             foreach ($row in $csvData) {
                 $fileName = $row.'関連付け用ファイル名'
-                $subFolderPath = Join-Path -Path $pdfPoolFolderPath -ChildPath $fileName
-                $pdfFilePath = Join-Path -Path $subFolderPath -ChildPath "$fileName.pdf"
-                $txtFilePath = Join-Path -Path $subFolderPath -ChildPath "$fileName.txt"
-
+                
+                # pdfFilePathMap からフルパスを取得
+                if ($this.PdfFilePathMap.ContainsKey($fileName)) {
+                    $pdfFilePath = $this.PdfFilePathMap[$fileName]
+                } else {
+                    $pdfFilePath = $null
+                }
+            
+                $txtFilePath = if ($pdfFilePath) { [System.IO.Path]::ChangeExtension($pdfFilePath, ".txt") } else { $null }
+            
                 $sourceFilePath = if (Test-Path $pdfFilePath) { $pdfFilePath } elseif (Test-Path $txtFilePath) { $txtFilePath } else { $null }
-
+            
                 if ($sourceFilePath -and $pdfPoolHashTable.ContainsKey($sourceFilePath)) {
-                    $destinationFilePath = Join-Path -Path $csvDestinationFolder -ChildPath (Get-Item $sourceFilePath).Name
-
+                    $destinationFilePath = Join-Path -Path $pdfFolderPath -ChildPath (Get-Item $sourceFilePath).Name
+            
                     Write-Host "Copying file: $sourceFilePath to $destinationFilePath"
-
+            
                     try {
                         Copy-Item -Path $sourceFilePath -Destination $destinationFilePath -ErrorAction Stop
                         $successCount.Value++
@@ -232,17 +231,16 @@ class FileManager {
                         Write-Host $errorMessage
                         $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
                         $failureCount.Value++
-                        throw $errorMessage  # エラーが発生した場合にスクリプトを停止
                     }
                 } else {
                     $errorMessage = "Source file not found or not in hash table: $fileName"
                     Write-Host $errorMessage
                     $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
                     $failureCount.Value++
-                    throw $errorMessage  # エラーが発生した場合にスクリプトを停止
                 }
             }
         }
+        
         Write-Host "Exiting CopyFilesBasedOnCsv"
     }
 }
