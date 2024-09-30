@@ -38,7 +38,9 @@ class PC {
         $this.PdfFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdfデータ"
         $this.PdfPoolHashTable = @{}
         $this.FilePathHashTable = @{}
-        $this.PdfFilePathMap = @{}  # 新しい連想配列の初期化
+     #   $this.PdfFilePathMap = @{}  # 新しい連想配列の初期化
+        $this.PdfFilePathMap = [System.Collections.Hashtable]::new([System.StringComparer]::OrdinalIgnoreCase)  # 大文字小文字を無視する連想配列の初期化
+
 
         # フォルダの存在確認
         $this.CheckFoldersExist()
@@ -210,7 +212,7 @@ class FileManager {
             $csvData = Import-Csv -Path $csvFile.FullName
 
             foreach ($row in $csvData) {
-                $fileName = $row.'関連付け用ファイル名'
+                $fileName = $row.'関連付け用ファイル名'.Trim()
                 
                 # pdfFilePathMap からフルパスを取得
                 if ($this.PdfFilePathMap.ContainsKey($fileName)) {
