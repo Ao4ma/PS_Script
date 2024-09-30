@@ -109,10 +109,15 @@ class PC {
                 Start-Sleep -Seconds 2
             }
         }
+
+    # ハッシュテーブルを保存
+    if ($folderPath -eq $this.PdfPoolFolderPath) {
         $this.SaveHashTable("PdfPoolHashTable.json", [ref]$this.PdfPoolHashTable)
-        if ($folderPath -eq $this.PdfPoolFolderPath) {
-            $this.SaveHashTable("PdfFilePathMap.json", [ref]$this.PdfFilePathMap)
-        }
+        $this.SaveHashTable("PdfFilePathMap.json", [ref]$this.PdfFilePathMap)
+    } elseif ($folderPath -eq $this.CsvFolderPath) {
+        $this.SaveHashTable("FilePathHashTable.json", [ref]$this.FilePathHashTable)
+    }
+    
         Write-Host "Exiting UpdateHashTable"
     }
 
