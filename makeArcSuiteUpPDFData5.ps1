@@ -204,6 +204,13 @@ class FileManager {
 
         foreach ($csvFile in $csvFiles) {
             $csvData = Import-Csv -Path $csvFile.FullName
+            $csvFileNameWithoutExtension = [System.IO.Path]::GetFileNameWithoutExtension($csvFile.Name)
+            $csvFileFolder = Join-Path -Path $pdfFolderPath -ChildPath $csvFileNameWithoutExtension
+
+            # CSVファイル名のフォルダを作成
+            if (-not (Test-Path -Path $csvFileFolder)) {
+                New-Item -Path $csvFileFolder -ItemType Directory -Force
+            }
 
             foreach ($row in $csvData) {
                 $fileName = $row.'関連付け用ファイル名'.Trim()
@@ -231,13 +238,7 @@ class FileManager {
                 }
             
                 if ($sourceFilePath -and $pdfPoolHashTable.ContainsKey($sourceFilePath)) {
-                    # 関連付けファイル名をフォルダ名とするフォルダを作成
-                    $fileFolder = Join-Path -Path $pdfFolderPath -ChildPath $fileName
-                    if (-not (Test-Path -Path $fileFolder)) {
-                        New-Item -Path $fileFolder -ItemType Directory -Force
-                    }
-
-                    $destinationFilePath = Join-Path -Path $fileFolder -ChildPath (Get-Item $sourceFilePath).Name
+                    $destinationFilePath = Join-Path -Path $csvFileFolder -ChildPath (Get-Item $sourceFilePath).Name
             
                     Write-Host "Copying file: $sourceFilePath to $destinationFilePath"
             
