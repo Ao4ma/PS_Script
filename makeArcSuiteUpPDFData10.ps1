@@ -1,17 +1,41 @@
 class PC {
+    [string]$Name
+    [string]$IPAddress
+    [string]$MACAddress
     [string]$WorkFolder
+    [string]$CsvFolderPath
     [string]$PdfPoolFolderPath
     [string]$PdfFolderPath
-    [string]$CsvFolderPath
     [hashtable]$PdfPoolHashTable
     [hashtable]$FilePathHashTable
-    [hashtable]$PdfFilePathMap
+    [hashtable]$PdfFilePathMap  # 新しい連想配列
 
+    # コンストラクタ
     PC() {
-        $this.WorkFolder = "C:\Work"  # 適切な作業フォルダパスに変更してください
+        Write-Host "Entering PC constructor"
+        $this.Name = (hostname)
+        
+        # ネットワークインターフェース情報を取得
+        $networkInterface = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
+        $this.IPAddress = (Get-NetIPAddress -InterfaceIndex $networkInterface.ifIndex -AddressFamily IPv4).IPAddress
+        $this.MACAddress = $networkInterface.MacAddress
+
+        # PC名に基づいて作業フォルダを設定
+        switch ($this.Name) {
+            "delld033" {
+                $this.WorkFolder = "S:\技術部storage\管理課\管理課共有資料\ArcSuite\#eValue-AS移行データ(本番)_test"  # デフォルトの作業フォルダ
+            }
+            "AsusTuf" {
+                $this.WorkFolder = "D:\技術部storage\管理課\管理課共有資料\ArcSuite\#eValue-AS移行データ(本番)"  # デフォルトの作業フォルダ
+            }
+            default {
+                $this.WorkFolder = "C:\技術部storage\管理課\管理課共有資料\ArcSuite\#eValue-AS移行データ(本番)"  # デフォルトの作業フォルダ
+            }
+        }
+        
+        $this.CsvFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用csvデータ"
         $this.PdfPoolFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdf_生成場所"
         $this.PdfFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#登録用pdfデータ"
-        $this.CsvFolderPath = Join-Path -Path $this.WorkFolder -ChildPath "#CSVデータ"
         $this.PdfPoolHashTable = @{}
         $this.FilePathHashTable = @{}
         $this.PdfFilePathMap = [System.Collections.Hashtable]::new([System.StringComparer]::OrdinalIgnoreCase)  # 大文字小文字を無視する連想配列の初期化
@@ -106,7 +130,6 @@ class PC {
         return $false
     }
 }
-
 
 class FileManager {
     [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$pdfFolderPath, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable, [hashtable]$pdfFilePathMap) {
