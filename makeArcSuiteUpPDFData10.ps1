@@ -138,8 +138,6 @@ class FileManager {
         Write-Host "Entering CopyFilesBasedOnCsv"
         $successCount.Value = 0
         $failureCount.Value = 0
-        $errorLogPath = Join-Path -Path $pdfFolderPath -ChildPath "error_log.txt"
-        $obsoleteLogPath = Join-Path -Path $pdfFolderPath -ChildPath "廃図作成処理ログ.txt"
 
         $csvFiles = Get-ChildItem -Path $csvFolderPath | Where-Object { 
             $_.Name -match "_(個装|図面|通知書).*-\d{3}\.csv" 
@@ -171,21 +169,10 @@ class FileManager {
                     } catch {
                         Write-Host "Failed to copy file: $fileName"
                         $failureCount.Value++
-                        $errorMessage = "Failed to copy file: $fileName. Error: $_"
-                        $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
                     }
                 } else {
                     Write-Host "Source file not found in PdfFilePathMap: $fileName"
                     $failureCount.Value++
-                    $errorMessage = "Source file not found in PdfFilePathMap: $fileName"
-                    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
-
-                    # ファイル名に "廃" が含まれている場合、廃図ファイルを作成
-                    if ($fileName -like "*廃*") {
-                        $obsoleteFilePath = Join-Path -Path $csvFileFolder -ChildPath "$fileName-Obsolete.txt"
-                        "Obsolete drawing" | Out-File -FilePath $obsoleteFilePath -Encoding UTF8
-                        "Created obsolete file: $obsoleteFilePath" | Out-File -FilePath $obsoleteLogPath -Append -Encoding UTF8
-                    }
                 }
             }
         }
@@ -287,7 +274,6 @@ class FileManager {
     }
 }
 
-
 # メイン処理
 Write-Host "Starting main script"
 $fileManager = [FileManager]::new()
@@ -297,13 +283,13 @@ $failureCount = [ref]0
 # PCオブジェクトの作成
 $pc = [PC]::new()
 
-# エラーログのパスを定義
-$errorLogPath = Join-Path -Path $pc.PdfFolderPath -ChildPath "error_log.txt"
-
 # ログフォルダのパスを定義
 $logFolderPath = Join-Path -Path $pc.WorkFolder -ChildPath "logs"
 if (-not (Test-Path -Path $logFolderPath)) {
     New-Item -Path $logFolderPath -ItemType Directory -Force
+} else {
+    # ログフォルダ内のログファイルをクリア
+    Get-ChildItem -Path $logFolderPath -Filter *.txt | ForEach-Object { Clear-Content -Path $_.FullName }
 }
 
 # PDFプールフォルダの状態をチェックし、変化があればハッシュテーブルと連想配列を更新
@@ -313,18 +299,28 @@ if ($pc.HasFolderChanged($pc.PdfPoolFolderPath, "*.pdf, *.txt", $pc.PdfPoolHashT
     $pc.LoadHashTable("PdfFilePathMap.json", [ref]$pc.PdfFilePathMap, 1000)
 }
 
-# ファイルパスの状態をチェックし、変化があればハッシュテーブルを更新
+# Csvファイルの状態をチェックし、変化があればハッシュテーブルを更新
 if ($pc.HasFolderChanged($pc.CsvFolderPath, "*.csv", $pc.FilePathHashTable)) {
     $pc.UpdateHashTable($pc.CsvFolderPath, "*.csv", [ref]$pc.FilePathHashTable, 1000)
 }
 
 # ファイルコピー処理の実行
 try {
-    $fileManager.CopyFilesBasedOnCsv($pc.CsvFolderPath, $pc.PdfPoolFolderPath, $pc.PdfFolderPath, [ref]$successCount, [ref]$failureCount, $pc.PdfPoolHashTable, $pc.PdfFilePathMap)
+    $csvFolders = Get-ChildItem -Path $pc.CsvFolderPath -Directory
+    foreach ($csvFolder in $csvFolders) {
+        $folderErrorLogPath = Join-Path -Path $logFolderPath -ChildPath "$($csvFolder.Name)_error_log.txt"
+        try {
+            $fileManager.CopyFilesBasedOnCsv($csvFolder.FullName, $pc.PdfPoolFolderPath, $pc.PdfFolderPath, [ref]$successCount, [ref]$failureCount, $pc.PdfPoolHashTable, $pc.PdfFilePathMap)
+        } catch {
+            Write-Host "An error occurred: $_"
+            $errorMessage = "An error occurred during file copy in folder $($csvFolder.Name). Error: $_"
+            $errorMessage | Out-File -FilePath $folderErrorLogPath -Append -Encoding UTF8
+        }
+    }
 } catch {
     Write-Host "An error occurred: $_"
     $errorMessage = "An error occurred during file copy. Error: $_"
-    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+    $errorMessage | Out-File -FilePath $logFolderPath -Append -Encoding UTF8
 }
 
 # 成功と失敗のカウントを表示
