@@ -245,27 +245,32 @@ class FileManager {
         $folders = Get-ChildItem -Path $pdfFolderPath -Directory
         $discrepancyLogPath = Join-Path -Path $pdfFolderPath -ChildPath "discrepancy_log.txt"
         $obsoleteLogPath = Join-Path -Path $pdfFolderPath -ChildPath "廃図作成処理ログ.txt"
-
+    
         foreach ($folder in $folders) {
+            # フォルダ名が "csvFile" である場合はスキップ
+            if ($folder.Name -like "csvFile") {
+                continue
+            }
+    
             $csvFileName = "$($folder.Name).csv"
             $csvFilePath = Join-Path -Path $pdfFolderPath -ChildPath $csvFileName
-
+    
             if (Test-Path -Path $csvFilePath) {
                 $csvData = Import-Csv -Path $csvFilePath
                 $discrepancies = @()
-
+    
                 foreach ($row in $csvData) {
                     $fileName = $row.'関連付け用ファイル名'.Trim()
                     $filePath = Join-Path -Path $folder.FullName -ChildPath "$fileName.pdf"
-
+    
                     if (-not (Test-Path -Path $filePath)) {
                         $discrepancies += $fileName
-                        $obsoleteFilePath = Join-Path -Path $folder.FullName -ChildPath ("$fileName" + "廃図.txt")
+                        $obsoleteFilePath = Join-Path -Path $folder.FullName -ChildPath "$fileName廃図.txt"
                         "Obsolete drawing" | Out-File -FilePath $obsoleteFilePath -Encoding UTF8
                         "Created obsolete file: $obsoleteFilePath" | Out-File -FilePath $obsoleteLogPath -Append -Encoding UTF8
                     }
                 }
-
+    
                 if ($discrepancies.Count -gt 0) {
                     "Discrepancies found in folder: $($folder.Name)" | Out-File -FilePath $discrepancyLogPath -Append -Encoding UTF8
                     $discrepancies | ForEach-Object { "Missing file: $_" | Out-File -FilePath $discrepancyLogPath -Append -Encoding UTF8 }
@@ -276,10 +281,9 @@ class FileManager {
                 "CSV file not found for folder: $($folder.Name)" | Out-File -FilePath $discrepancyLogPath -Append -Encoding UTF8
             }
         }
-
+    
         Write-Host "Exiting VerifyFilesInFolders"
     }
-}
 
 # メイン処理
 Write-Host "Starting main script"
