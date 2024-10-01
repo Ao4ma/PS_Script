@@ -45,18 +45,18 @@ class PC {
     [void]UpdateHashTable([string]$folderPath, [string]$fileExtensions, [ref]$hashTable, [int]$batchSize = 1000) {
         Write-Host "Entering UpdateHashTable"
         
-        # 確認メッセージを表示し、5秒間入力を待つ
-        $confirmation = Read-Host -Prompt "Do you want to initialize the hash table? (yes/no) [default: yes]" -Timeout 5
+        # 確認メッセージを表示し、5秒間待機
+        $confirmation = Read-Host -Prompt "Do you want to initialize the hash table? (yes/no) [default: yes]"
         if ([string]::IsNullOrWhiteSpace($confirmation)) {
             $confirmation = "yes"
         }
-
+    
         if ($confirmation -ne "yes") {
             Write-Host "Hash table initialization canceled."
             Write-Host "Exiting UpdateHashTable"
             return
         }
-
+    
         $hashTable.Value.Clear()
         if ($folderPath -eq $this.PdfPoolFolderPath) {
             $this.PdfFilePathMap.Clear()  # 新しい連想配列のクリア
@@ -69,7 +69,7 @@ class PC {
             }
         $totalFiles = $files.Count
         $currentFileIndex = 0
-
+    
         foreach ($file in $files) {
             $currentFileIndex++
             Write-Host "Processing file $currentFileIndex of $($totalFiles): $($file.FullName)"
@@ -79,14 +79,14 @@ class PC {
                 $fileName = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
                 $this.PdfFilePathMap[$fileName] = $file.FullName  # 新しい連想配列に追加
             }
-
+    
             # バッチサイズごとに処理を一時停止
             if ($currentFileIndex % $batchSize -eq 0) {
                 Write-Host "Processed $currentFileIndex files. Pausing for a moment..."
                 Start-Sleep -Seconds 2
             }
         }
-
+    
         # ハッシュテーブルを保存
         if ($folderPath -eq $this.PdfPoolFolderPath) {
             $this.SaveHashTable("PdfPoolHashTable.json", [ref]$this.PdfPoolHashTable)
@@ -131,6 +131,8 @@ class PC {
     }
 }
 
+
+
 class FileManager {
     [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$pdfFolderPath, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable, [hashtable]$pdfFilePathMap) {
         Write-Host "Entering CopyFilesBasedOnCsv"
@@ -161,83 +163,45 @@ class FileManager {
 
                 # pdfFilePathMap からフルパスを取得
                 if ($pdfFilePathMap.ContainsKey($fileName)) {
-                    $pdfFilePath = $pdfFilePathMap[$fileName]
-                } else {
-                    $pdfFilePath = $null
-                    $errorMessage = "Source file not found in PdfFilePathMap: $fileName"
-                    Write-Host $errorMessage
-                    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
-                    $failureCount.Value++
-                    continue
-                }
-            
-                $txtFilePath = if ($pdfFilePath) { [System.IO.Path]::ChangeExtension($pdfFilePath, ".txt") } else { $null }
-            
-                $sourceFilePath = if ($pdfFilePath -and (Test-Path $pdfFilePath)) { 
-                    $pdfFilePath 
-                } elseif ($txtFilePath -and (Test-Path $txtFilePath)) { 
-                    $txtFilePath 
-                } else { 
-                    $null 
-                }
-            
-                if ($sourceFilePath -and $pdfPoolHashTable.ContainsKey($sourceFilePath)) {
-                    $destinationFilePath = Join-Path -Path $csvFileFolder -ChildPath (Get-Item $sourceFilePath).Name
-            
-                    Write-Host "Copying file: $sourceFilePath to $destinationFilePath"
-            
+                    $sourceFilePath = $pdfFilePathMap[$fileName]
+                    $destinationFilePath = Join-Path -Path $csvFileFolder -ChildPath "$fileName.pdf"
                     try {
-                        Copy-Item -Path $sourceFilePath -Destination $destinationFilePath -ErrorAction Stop
+                        Copy-Item -Path $sourceFilePath -Destination $destinationFilePath -Force
                         $successCount.Value++
-                        Write-Host "Successfully copied: $sourceFilePath"
                     } catch {
-                        $errorMessage = "Failed to copy $sourceFilePath to $destinationFilePath. Error: $_"
-                        Write-Host $errorMessage
-                        $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+                        Write-Host "Failed to copy file: $fileName"
                         $failureCount.Value++
+                        $errorMessage = "Failed to copy file: $fileName. Error: $_"
+                        $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
                     }
                 } else {
-                    $errorMessage = "Source file not found or not in hash table: $fileName"
-                    Write-Host $errorMessage
-                    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+                    Write-Host "Source file not found in PdfFilePathMap: $fileName"
                     $failureCount.Value++
-                }
+                    $errorMessage = "Source file not found in PdfFilePathMap: $fileName"
+                    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
 
-                # 行データに「廃」が含まれている場合の処理
-                if ($row -like "*廃*") {
-                    $txtFileName = "$fileName.txt"
-                    if ($pdfFilePathMap.ContainsKey($fileName)) {
-                        $txtFilePath = $pdfFilePathMap[$fileName]
-                        if (Test-Path $txtFilePath) {
-                            $destinationTxtFilePath = Join-Path -Path $csvFileFolder -ChildPath (Get-Item $txtFilePath).Name
-                            Write-Host "Copying file: $txtFilePath to $destinationTxtFilePath"
-                            try {
-                                Copy-Item -Path $txtFilePath -Destination $destinationTxtFilePath -ErrorAction Stop
-                                Write-Host "Successfully copied: $txtFilePath"
-                            } catch {
-                                $errorMessage = "Failed to copy $txtFilePath to $destinationTxtFilePath. Error: $_"
-                                Write-Host $errorMessage
-                                $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
-                            }
-                        } else {
-                            $errorMessage = "TXT file not found: $txtFilePath"
-                            Write-Host $errorMessage
-                            $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
-                        }
-                    } else {
-                        $errorMessage = "TXT file not found in PdfFilePathMap: $txtFileName"
-                        Write-Host $errorMessage
-                        $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+                    # ファイル名に "廃" が含まれている場合、廃図ファイルを作成
+                    if ($fileName -like "*廃*") {
+                        $obsoleteFilePath = Join-Path -Path $csvFileFolder -ChildPath "$fileName-Obsolete.txt"
+                        "Obsolete drawing" | Out-File -FilePath $obsoleteFilePath -Encoding UTF8
+                        "Created obsolete file: $obsoleteFilePath" | Out-File -FilePath $obsoleteLogPath -Append -Encoding UTF8
                     }
                 }
             }
         }
-        
+
         Write-Host "Exiting CopyFilesBasedOnCsv"
     }
 
     [void]VerifyFilesInFolders([string]$pdfFolderPath, [string]$logFolderPath) {
         Write-Host "Entering VerifyFilesInFolders"
+
+        if (-not (Test-Path -Path $pdfFolderPath)) {
+            Write-Host "Path not found: $pdfFolderPath"
+            Write-Host "Exiting VerifyFilesInFolders"
+            return
+        }
+
         $folders = Get-ChildItem -Path $pdfFolderPath -Directory
 
         foreach ($folder in $folders) {
@@ -322,6 +286,7 @@ class FileManager {
         Write-Host "Exiting VerifyFilesInFolders"
     }
 }
+
 
 # メイン処理
 Write-Host "Starting main script"
