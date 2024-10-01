@@ -162,13 +162,16 @@ class FileManager {
 
             foreach ($row in $csvData) {
                 $fileName = $row.'関連付け用ファイル名'.Trim()
-                
+                $fileNameTrimmed = $fileName.TrimEnd()
+
                 # pdfFilePathMap からフルパスを取得
                 if ($pdfFilePathMap.ContainsKey($fileName)) {
                     $pdfFilePath = $pdfFilePathMap[$fileName]
+                } elseif ($pdfFilePathMap.ContainsKey($fileNameTrimmed)) {
+                    $pdfFilePath = $pdfFilePathMap[$fileNameTrimmed]
                 } else {
                     $pdfFilePath = $null
-                    $errorMessage = "Source file not found in PdfFilePathMap: $fileName"
+                    $errorMessage = "Source file not found in PdfFilePathMap: $fileName or $fileNameTrimmed"
                     Write-Host $errorMessage
                     $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
                     $failureCount.Value++
@@ -186,7 +189,8 @@ class FileManager {
                 }
             
                 if ($sourceFilePath -and $pdfPoolHashTable.ContainsKey($sourceFilePath)) {
-                    $destinationFilePath = Join-Path -Path $csvFileFolder -ChildPath (Get-Item $sourceFilePath).Name
+                    $destinationFileName = (Get-Item $sourceFilePath).Name.TrimEnd()
+                    $destinationFilePath = Join-Path -Path $csvFileFolder -ChildPath $destinationFileName
             
                     Write-Host "Copying file: $sourceFilePath to $destinationFilePath"
             
@@ -194,6 +198,13 @@ class FileManager {
                         Copy-Item -Path $sourceFilePath -Destination $destinationFilePath -ErrorAction Stop
                         $successCount.Value++
                         Write-Host "Successfully copied: $sourceFilePath"
+                        
+                        # 半角スペースがある場合の差異をログに記録
+                        if ($fileName -ne $fileNameTrimmed) {
+                            $discrepancyMessage = "Discrepancy: $fileName (with space) copied as $destinationFileName (without space)"
+                            Write-Host $discrepancyMessage
+                            $discrepancyMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+                        }
                     } catch {
                         $errorMessage = "Failed to copy $sourceFilePath to $destinationFilePath. Error: $_"
                         Write-Host $errorMessage
@@ -201,7 +212,7 @@ class FileManager {
                         $failureCount.Value++
                     }
                 } else {
-                    $errorMessage = "Source file not found or not in hash table: $fileName"
+                    $errorMessage = "Source file not found or not in hash table: $fileName or $fileNameTrimmed"
                     Write-Host $errorMessage
                     $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
                     $failureCount.Value++
@@ -213,7 +224,7 @@ class FileManager {
                     if ($pdfFilePathMap.ContainsKey($fileName)) {
                         $txtFilePath = $pdfFilePathMap[$fileName]
                         if (Test-Path $txtFilePath) {
-                            $destinationTxtFilePath = Join-Path -Path $csvFileFolder -ChildPath (Get-Item $txtFilePath).Name
+                            $destinationTxtFilePath = Join-Path -Path $csvFileFolder -ChildPath (Get-Item $txtFilePath).Name.TrimEnd()
                             Write-Host "Copying file: $txtFilePath to $destinationTxtFilePath"
                             try {
                                 Copy-Item -Path $txtFilePath -Destination $destinationTxtFilePath -ErrorAction Stop
@@ -243,47 +254,56 @@ class FileManager {
     [void]VerifyFilesInFolders([string]$pdfFolderPath) {
         Write-Host "Entering VerifyFilesInFolders"
         $folders = Get-ChildItem -Path $pdfFolderPath -Directory
-        $discrepancyLogPath = Join-Path -Path $pdfFolderPath -ChildPath "discrepancy_log.txt"
-        $obsoleteLogPath = Join-Path -Path $pdfFolderPath -ChildPath "廃図作成処理ログ.txt"
     
         foreach ($folder in $folders) {
-            # フォルダ名が "csvFile" である場合はスキップ
-            if ($folder.Name -like "csvFile") {
-                continue
-            }
-    
             $csvFileName = "$($folder.Name).csv"
             $csvFilePath = Join-Path -Path $pdfFolderPath -ChildPath $csvFileName
+            $folderLogPath = Join-Path -Path $folder.FullName -ChildPath "$($folder.Name).log"
     
             if (Test-Path -Path $csvFilePath) {
                 $csvData = Import-Csv -Path $csvFilePath
                 $discrepancies = @()
+                $successCount = 0
+                $failureCount = 0
     
                 foreach ($row in $csvData) {
                     $fileName = $row.'関連付け用ファイル名'.Trim()
+                    $fileNameTrimmed = $fileName.TrimEnd()  # ファイル名の最後に半角スペースが入っている場合に対応
                     $filePath = Join-Path -Path $folder.FullName -ChildPath "$fileName.pdf"
+                    $filePathTrimmed = Join-Path -Path $folder.FullName -ChildPath "$fileNameTrimmed.pdf"
     
-                    if (-not (Test-Path -Path $filePath)) {
+                    if (Test-Path -Path $filePath) {
+                        $successCount++
+                    } elseif (Test-Path -Path $filePathTrimmed) {
+                        $successCount++
+                        $discrepancies += "Discrepancy: $fileName (with space) found as $fileNameTrimmed (without space)"
+                    } else {
                         $discrepancies += $fileName
-                        $obsoleteFilePath = Join-Path -Path $folder.FullName -ChildPath "$fileName廃図.txt"
+                        $failureCount++
+                        $obsoleteFilePath = Join-Path -Path $folder.FullName -ChildPath "$fileName-Obsolete.txt"
                         "Obsolete drawing" | Out-File -FilePath $obsoleteFilePath -Encoding UTF8
-                        "Created obsolete file: $obsoleteFilePath" | Out-File -FilePath $obsoleteLogPath -Append -Encoding UTF8
+                        "Created obsolete file: $obsoleteFilePath" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
                     }
                 }
     
+                "Total files: $($csvData.Count)" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                "Successfully copied: $successCount" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                "Failed to copy: $failureCount" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+    
                 if ($discrepancies.Count -gt 0) {
-                    "Discrepancies found in folder: $($folder.Name)" | Out-File -FilePath $discrepancyLogPath -Append -Encoding UTF8
-                    $discrepancies | ForEach-Object { "Missing file: $_" | Out-File -FilePath $discrepancyLogPath -Append -Encoding UTF8 }
+                    "Discrepancies found in folder: $($folder.Name)" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                    $discrepancies | ForEach-Object { "Missing file: $_" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8 }
                 } else {
-                    "No discrepancies found in folder: $($folder.Name)" | Out-File -FilePath $discrepancyLogPath -Append -Encoding UTF8
+                    "No discrepancies found in folder: $($folder.Name)" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
                 }
             } else {
-                "CSV file not found for folder: $($folder.Name)" | Out-File -FilePath $discrepancyLogPath -Append -Encoding UTF8
+                "CSV file not found for folder: $($folder.Name)" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
             }
         }
     
         Write-Host "Exiting VerifyFilesInFolders"
     }
+}
 
 # メイン処理
 Write-Host "Starting main script"
