@@ -260,7 +260,7 @@ class FileManager {
 
                     if (-not (Test-Path -Path $filePath)) {
                         $discrepancies += $fileName
-                        $obsoleteFilePath = Join-Path -Path $folder.FullName -ChildPath "$fileName廃図.txt"
+                        $obsoleteFilePath = Join-Path -Path $folder.FullName -ChildPath ("$fileName" + "廃図.txt")
                         "Obsolete drawing" | Out-File -FilePath $obsoleteFilePath -Encoding UTF8
                         "Created obsolete file: $obsoleteFilePath" | Out-File -FilePath $obsoleteLogPath -Append -Encoding UTF8
                     }
@@ -322,4 +322,3 @@ Write-Host "Failure: $($failureCount.Value)"
 $fileManager.VerifyFilesInFolders($pc.PdfFolderPath)
 
 Write-Host "Ending main script"
-
