@@ -45,32 +45,8 @@ class PC {
     [void]UpdateHashTable([string]$folderPath, [string]$fileExtensions, [ref]$hashTable, [int]$batchSize = 1000) {
         Write-Host "Entering UpdateHashTable"
         
-        # 確認メッセージを表示し、5秒間待機
-        $confirmation = $null
-        $prompt = "Do you want to initialize the hash table? (yes/no) [default: yes]"
-        $job = Start-Job -ScriptBlock {
-            param ($prompt)
-            Read-Host -Prompt $prompt
-        } -ArgumentList $prompt
-    
-        Start-Sleep -Seconds 5
-        if ($job.State -eq 'Running') {
-            Stop-Job -Job $job
-            $confirmation = "yes"
-        } else {
-            $confirmation = Receive-Job -Job $job
-        }
-        Remove-Job -Job $job
-    
-        if ([string]::IsNullOrWhiteSpace($confirmation)) {
-            $confirmation = "yes"
-        }
-    
-        if ($confirmation -ne "yes") {
-            Write-Host "Hash table initialization canceled."
-            Write-Host "Exiting UpdateHashTable"
-            return
-        }
+        # 確認メッセージを表示し、5秒間待機を削除
+        Write-Host "Initializing the hash table..."
     
         $hashTable.Value.Clear()
         if ($folderPath -eq $this.PdfPoolFolderPath) {
