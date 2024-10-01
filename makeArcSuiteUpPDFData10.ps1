@@ -112,7 +112,48 @@ class PC {
         
         Write-Host "Exiting UpdateHashTable"
     }
+
+    # フォルダの変更をチェック
+    [bool]HasFolderChanged([string]$folderPath, [string]$fileExtensions, [hashtable]$hashTable) {
+        Write-Host "Entering HasFolderChanged"
+        $extensions = $fileExtensions -split "," | ForEach-Object { "*$($_.TrimStart('*'))" }
+        $files = Get-ChildItem -Path $folderPath -Recurse -File | 
+            Where-Object { 
+                ($ext = $_.Extension); 
+                ($extensions | ForEach-Object { $ext -like $_ }) -contains $true 
+            }
+        foreach ($file in $files) {
+            $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
+            if (-not $hashTable.ContainsKey($file.FullName) -or $hashTable[$file.FullName] -ne $hash.Hash) {
+                Write-Host "Folder has changed: $($file.FullName)"
+                Write-Host "Exiting HasFolderChanged"
+                return $true
+            }
+        }
+        Write-Host "No changes detected in folder: $folderPath"
+        Write-Host "Exiting HasFolderChanged"
+        return $false
+    }
+
+    # ハッシュテーブルを保存
+    [void]SaveHashTable([string]$filePath, [ref]$hashTable) {
+        Write-Host "Entering SaveHashTable"
+        $json = $hashTable.Value | ConvertTo-Json -Depth 10
+        $json | Out-File -FilePath $filePath -Encoding UTF8
+        Write-Host "Exiting SaveHashTable"
+    }
+
+    # ハッシュテーブルを読み込む
+    [void]LoadHashTable([string]$filePath, [ref]$hashTable) {
+        Write-Host "Entering LoadHashTable"
+        if (Test-Path -Path $filePath) {
+            $json = Get-Content -Path $filePath -Raw
+            $hashTable.Value = $json | ConvertFrom-Json
+        }
+        Write-Host "Exiting LoadHashTable"
+    }
 }
+
 
 class FileManager {
     [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$pdfFolderPath, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable, [hashtable]$pdfFilePathMap) {
