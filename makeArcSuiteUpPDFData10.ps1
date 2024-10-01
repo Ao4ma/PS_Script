@@ -46,7 +46,22 @@ class PC {
         Write-Host "Entering UpdateHashTable"
         
         # 確認メッセージを表示し、5秒間待機
-        $confirmation = Read-Host -Prompt "Do you want to initialize the hash table? (yes/no) [default: yes]"
+        $confirmation = $null
+        $prompt = "Do you want to initialize the hash table? (yes/no) [default: yes]"
+        $job = Start-Job -ScriptBlock {
+            param ($prompt)
+            Read-Host -Prompt $prompt
+        } -ArgumentList $prompt
+    
+        Start-Sleep -Seconds 5
+        if ($job.State -eq 'Running') {
+            Stop-Job -Job $job
+            $confirmation = "yes"
+        } else {
+            $confirmation = Receive-Job -Job $job
+        }
+        Remove-Job -Job $job
+    
         if ([string]::IsNullOrWhiteSpace($confirmation)) {
             $confirmation = "yes"
         }
@@ -97,41 +112,7 @@ class PC {
         
         Write-Host "Exiting UpdateHashTable"
     }
-
-    # ハッシュテーブルを保存
-    [void]SaveHashTable([string]$fileName, [ref]$hashTable) {
-        $json = $hashTable.Value | ConvertTo-Json -Depth 10
-        $json | Out-File -FilePath (Join-Path -Path $this.WorkFolder -ChildPath $fileName) -Encoding UTF8
-    }
-
-    # ハッシュテーブルを読み込む
-    [void]LoadHashTable([string]$fileName, [ref]$hashTable, [int]$batchSize = 1000) {
-        $filePath = Join-Path -Path $this.WorkFolder -ChildPath $fileName
-        if (Test-Path -Path $filePath) {
-            $json = Get-Content -Path $filePath -Raw -Encoding UTF8
-            $hashTable.Value = $json | ConvertFrom-Json
-        }
-    }
-
-    # フォルダの変更を確認
-    [bool]HasFolderChanged([string]$folderPath, [string]$fileExtensions, [hashtable]$hashTable) {
-        $extensions = $fileExtensions -split "," | ForEach-Object { "*$($_.TrimStart('*'))" }
-        $files = Get-ChildItem -Path $folderPath -Recurse -File | 
-            Where-Object { 
-                ($ext = $_.Extension); 
-                ($extensions | ForEach-Object { $ext -like $_ }) -contains $true 
-            }
-        foreach ($file in $files) {
-            $hash = Get-FileHash -Path $file.FullName -Algorithm SHA256
-            if (-not $hashTable.ContainsKey($file.FullName) -or $hashTable[$file.FullName] -ne $hash.Hash) {
-                return $true
-            }
-        }
-        return $false
-    }
 }
-
-
 
 class FileManager {
     [void]CopyFilesBasedOnCsv([string]$csvFolderPath, [string]$pdfPoolFolderPath, [string]$pdfFolderPath, [ref]$successCount, [ref]$failureCount, [hashtable]$pdfPoolHashTable, [hashtable]$pdfFilePathMap) {
@@ -163,6 +144,7 @@ class FileManager {
                 if ($pdfFilePathMap.ContainsKey($fileName)) {
                     $sourceFilePath = $pdfFilePathMap[$fileName]
                     $destinationFilePath = Join-Path -Path $csvFileFolder -ChildPath "$fileName.pdf"
+                    Write-Host "Copying file: $sourceFilePath to $destinationFilePath"
                     try {
                         Copy-Item -Path $sourceFilePath -Destination $destinationFilePath -Force
                         $successCount.Value++
@@ -310,6 +292,7 @@ try {
     foreach ($csvFolder in $csvFolders) {
         $folderErrorLogPath = Join-Path -Path $logFolderPath -ChildPath "$($csvFolder.Name)_error_log.txt"
         try {
+            Write-Host "Processing CSV folder: $($csvFolder.FullName)"
             $fileManager.CopyFilesBasedOnCsv($csvFolder.FullName, $pc.PdfPoolFolderPath, $pc.PdfFolderPath, [ref]$successCount, [ref]$failureCount, $pc.PdfPoolHashTable, $pc.PdfFilePathMap)
         } catch {
             Write-Host "An error occurred: $_"
