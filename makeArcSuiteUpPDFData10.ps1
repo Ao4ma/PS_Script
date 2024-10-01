@@ -113,7 +113,10 @@ class PC {
 
     # ハッシュテーブルを保存
     [void]SaveHashTable([string]$filePath, [ref]$hashTable) {
-        Write-Host "Entering SaveHashTable"
+        
+        
+
+        
         $json = $hashTable.Value | ConvertTo-Json -Depth 10
         $json | Out-File -FilePath $filePath -Encoding UTF8
         Write-Host "Exiting SaveHashTable"
