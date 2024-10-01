@@ -45,9 +45,9 @@ class PC {
     [void]UpdateHashTable([string]$folderPath, [string]$fileExtensions, [ref]$hashTable, [int]$batchSize = 1000) {
         Write-Host "Entering UpdateHashTable"
         
-        # 確認メッセージを表示
-        $confirmation = Read-Host "Do you want to initialize the hash table? (yes/no) [default: yes]"
-        if ([string]::IsNullOrWhiteSpace($confirmation) -or $confirmation -eq "yes") {
+        # 確認メッセージを表示し、5秒間入力を待つ
+        $confirmation = Read-Host -Prompt "Do you want to initialize the hash table? (yes/no) [default: yes]" -Timeout 5
+        if ([string]::IsNullOrWhiteSpace($confirmation)) {
             $confirmation = "yes"
         }
 
@@ -251,53 +251,86 @@ class FileManager {
         Write-Host "Exiting CopyFilesBasedOnCsv"
     }
 
-    [void]VerifyFilesInFolders([string]$pdfFolderPath) {
+    [void]VerifyFilesInFolders([string]$pdfFolderPath, [string]$logFolderPath) {
         Write-Host "Entering VerifyFilesInFolders"
         $folders = Get-ChildItem -Path $pdfFolderPath -Directory
     
         foreach ($folder in $folders) {
             $csvFileName = "$($folder.Name).csv"
             $csvFilePath = Join-Path -Path $pdfFolderPath -ChildPath $csvFileName
-            $folderLogPath = Join-Path -Path $folder.FullName -ChildPath "$($folder.Name).log"
+            $folderLogPath = Join-Path -Path $logFolderPath -ChildPath "$($folder.Name).log"
     
             if (Test-Path -Path $csvFilePath) {
                 $csvData = Import-Csv -Path $csvFilePath
-                $discrepancies = @()
-                $successCount = 0
-                $failureCount = 0
+                $totalFiles = $csvData.Count
+                $successPdfCount = 0
+                $successTxtCount = 0
+                $successObsoletePdfCount = 0
+                $successObsoleteTxtCount = 0
+                $generatedObsoleteTxtCount = 0
+                $generatedObsoleteFiles = @()
     
                 foreach ($row in $csvData) {
                     $fileName = $row.'関連付け用ファイル名'.Trim()
                     $fileNameTrimmed = $fileName.TrimEnd()  # ファイル名の最後に半角スペースが入っている場合に対応
-                    $filePath = Join-Path -Path $folder.FullName -ChildPath "$fileName.pdf"
-                    $filePathTrimmed = Join-Path -Path $folder.FullName -ChildPath "$fileNameTrimmed.pdf"
+                    $pdfFilePath = Join-Path -Path $folder.FullName -ChildPath "$fileNameTrimmed.pdf"
+                    $txtFilePath = Join-Path -Path $folder.FullName -ChildPath "$fileNameTrimmed.txt"
     
-                    if (Test-Path -Path $filePath) {
-                        $successCount++
-                    } elseif (Test-Path -Path $filePathTrimmed) {
-                        $successCount++
-                        $discrepancies += "Discrepancy: $fileName (with space) found as $fileNameTrimmed (without space)"
-                    } else {
-                        $discrepancies += $fileName
-                        $failureCount++
-                        $obsoleteFilePath = Join-Path -Path $folder.FullName -ChildPath "$fileName-Obsolete.txt"
+                    if (Test-Path -Path $pdfFilePath) {
+                        if ($fileName -like "*廃*") {
+                            $successObsoletePdfCount++
+                        } else {
+                            $successPdfCount++
+                        }
+                    }
+    
+                    if (Test-Path -Path $txtFilePath) {
+                        if ($fileName -like "*廃*") {
+                            $successObsoleteTxtCount++
+                        } else {
+                            $successTxtCount++
+                        }
+                    } elseif ($fileName -like "*廃*") {
+                        $generatedObsoleteTxtCount++
+                        $obsoleteFilePath = Join-Path -Path $folder.FullName -ChildPath "$fileNameTrimmed-Obsolete.txt"
                         "Obsolete drawing" | Out-File -FilePath $obsoleteFilePath -Encoding UTF8
                         "Created obsolete file: $obsoleteFilePath" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                        $generatedObsoleteFiles += $obsoleteFilePath
+                    }
+    
+                    # トリム処理したファイル名とフルパスをログに記載
+                    if ($fileName -ne $fileNameTrimmed) {
+                        "Trimmed file name: $fileNameTrimmed (Original: $fileName)" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                        "Full path: $pdfFilePath" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
                     }
                 }
     
-                "Total files: $($csvData.Count)" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
-                "Successfully copied: $successCount" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
-                "Failed to copy: $failureCount" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                $totalSuccessFiles = $successPdfCount + $successTxtCount + $successObsoletePdfCount + $successObsoleteTxtCount
+                $discrepancyCount = $totalFiles - $totalSuccessFiles
     
-                if ($discrepancies.Count -gt 0) {
+                "Total files: $totalFiles" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                "Successfully copied PDFs (without '廃'): $successPdfCount" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                "Successfully copied TXTs (without '廃'): $successTxtCount" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                "Successfully copied PDFs (with '廃'): $successObsoletePdfCount" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                "Successfully copied TXTs (with '廃'): $successObsoleteTxtCount" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                "Generated obsolete TXTs: $generatedObsoleteTxtCount" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                "Discrepancy count: $discrepancyCount" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+    
+                if ($generatedObsoleteFiles.Count -gt 0) {
+                    "Generated obsolete files:" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                    $generatedObsoleteFiles | ForEach-Object { $_ | Out-File -FilePath $folderLogPath -Append -Encoding UTF8 }
+                }
+    
+                if ($discrepancyCount -gt 0) {
                     "Discrepancies found in folder: $($folder.Name)" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
-                    $discrepancies | ForEach-Object { "Missing file: $_" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8 }
+                    $csvData | Where-Object { -not (Test-Path -Path (Join-Path -Path $folder.FullName -ChildPath "$($_.'関連付け用ファイル名'.TrimEnd()).pdf")) } | ForEach-Object {
+                        "Missing file: $($_.'関連付け用ファイル名'.TrimEnd())" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                    }
                 } else {
                     "No discrepancies found in folder: $($folder.Name)" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
                 }
             } else {
-                "CSV file not found for folder: $($folder.Name)" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
+                "CSV file not found: $csvFileName" | Out-File -FilePath $folderLogPath -Append -Encoding UTF8
             }
         }
     
@@ -316,6 +349,12 @@ $pc = [PC]::new()
 
 # エラーログのパスを定義
 $errorLogPath = Join-Path -Path $pc.PdfFolderPath -ChildPath "error_log.txt"
+
+# ログフォルダのパスを定義
+$logFolderPath = Join-Path -Path $pc.WorkFolder -ChildPath "logs"
+if (-not (Test-Path -Path $logFolderPath)) {
+    New-Item -Path $logFolderPath -ItemType Directory -Force
+}
 
 # PDFプールフォルダの状態をチェックし、変化があればハッシュテーブルと連想配列を更新
 if ($pc.HasFolderChanged($pc.PdfPoolFolderPath, "*.pdf, *.txt", $pc.PdfPoolHashTable)) {
@@ -343,6 +382,6 @@ Write-Host "Success: $($successCount.Value)"
 Write-Host "Failure: $($failureCount.Value)"
 
 # フォルダ内のファイルを確認
-$fileManager.VerifyFilesInFolders($pc.PdfFolderPath)
+$fileManager.VerifyFilesInFolders($pc.PdfFolderPath, $logFolderPath)
 
 Write-Host "Ending main script"
