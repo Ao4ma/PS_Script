@@ -123,7 +123,7 @@ class PC {
             Write-Host "Successfully saved hash table to $filePath"
         } catch {
             $errorMessage = "Error saving hash table to $filePath. Error: $_"
-            $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
+            $errorMessage | Out-File -FilePath $script:errorLogPath -Append -Encoding UTF8
             Write-Host $errorMessage
         }
     }
@@ -309,7 +309,7 @@ try {
     }
 } catch {
     $errorMessage = "Error checking or updating PDF pool folder. Error: $_"
-    $errorMessage | Out-File -FilePath $logFolderPath\error_log.txt -Append -Encoding UTF8
+    $errorMessage | Out-File -FilePath $script:errorLogPath -Append -Encoding UTF8
     Write-Host $errorMessage
 }
 
@@ -320,7 +320,7 @@ try {
     }
 } catch {
     $errorMessage = "Error checking or updating CSV folder. Error: $_"
-    $errorMessage | Out-File -FilePath $logFolderPath\error_log.txt -Append -Encoding UTF8
+    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
     Write-Host $errorMessage
 }
 
@@ -340,7 +340,7 @@ try {
     }
 } catch {
     $errorMessage = "An error occurred during file copy. Error: $_"
-    $errorMessage | Out-File -FilePath $logFolderPath\error_log.txt -Append -Encoding UTF8
+    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
     Write-Host $errorMessage
 }
 
@@ -353,7 +353,7 @@ try {
     $fileManager.VerifyFilesInFolders($pc.PdfFolderPath, $logFolderPath)
 } catch {
     $errorMessage = "An error occurred during file verification. Error: $_"
-    $errorMessage | Out-File -FilePath $logFolderPath\error_log.txt -Append -Encoding UTF8
+    $errorMessage | Out-File -FilePath $errorLogPath -Append -Encoding UTF8
     Write-Host $errorMessage
 }
 
