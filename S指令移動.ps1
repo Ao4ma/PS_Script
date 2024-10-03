@@ -85,8 +85,12 @@ function Find-File {
 # コピー先フォルダ毎のファイル数を集計するハッシュテーブル
 $folderFileCount = @{}
 
+# 総ループ数のカウンタ
+$totalLoops = 0
+
 # コピー処理
 foreach ($row in $copyList) {
+    $totalLoops++
     $sourceFileName = $row.'ファイル名'
     $destinationFileName = $row.'タイトル'
     $sourceFilePath = Find-File -folderPath $sourceFolderPath -fileName $sourceFileName
@@ -109,6 +113,11 @@ foreach ($row in $copyList) {
                 $folderFileCount[$destinationFolderName]++
             } else {
                 $folderFileCount[$destinationFolderName] = 1
+            }
+
+            # 非デバッグモードでのターミナル出力
+            if (-not $debugMode) {
+                Write-Host "$totalLoops`t$sourceFileName`t$destinationFolderName`t$destinationFileName"
             }
         } catch {
             Write-ErrorLog "Error copying $sourceFilePath to ${destinationFilePath}: $($_.Exception.Message)"
