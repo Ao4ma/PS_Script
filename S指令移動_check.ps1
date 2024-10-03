@@ -19,7 +19,7 @@ if (-not (Test-Path -Path $checklogFolderPath)) {
 $checkerrorLogFilePath = Join-Path -Path $checklogFolderPath -ChildPath "照合error_log.txt"
 
 # 照合エラーログファイルをクリア
-if (Test-Path -Path $checkerrorLogFilePath)) {
+if (Test-Path -Path $checkerrorLogFilePath) {
     Remove-Item -Path $checkerrorLogFilePath -Force
 }
 
@@ -59,9 +59,10 @@ if (-not (Test-Path -Path $copyListFilePath)) {
 $copyList = Import-Csv -Path $copyListFilePath -Encoding "shift_jis"
 
 # フォルダごとに比較照合
-$folders = $copyList | Select-Object -ExpandProperty 'フォルダ名' | Sort-Object -Unique
+$folders = $copyList | Select-Object -ExpandProperty 'フォルダパス' | Sort-Object -Unique
 
-foreach ($folder in $folders) {
+foreach ($folderPath in $folders) {
+    $folder = Split-Path -Path $folderPath -Leaf
     $selectedFolderPath = Join-Path -Path $destinationTopFolderPath -ChildPath $folder
 
     # ログファイルのパスを決定
@@ -80,7 +81,7 @@ foreach ($folder in $folders) {
     $actualFileCount = (Get-ChildItem -Path $selectedFolderPath -File -Recurse).Count
 
     # CSVファイルのsourceFileNameの数を取得
-    $csvFileCount = ($copyList | Where-Object { $_.'フォルダ名' -eq $folder }).Count
+    $csvFileCount = ($copyList | Where-Object { $_.'フォルダパス' -eq $folderPath }).Count
 
     # ログファイルの実施ログを一行ずつ確認
     foreach ($logEntry in $logEntries) {
