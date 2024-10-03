@@ -1,5 +1,5 @@
 # デバッグモードの設定
-$debugMode = $false
+$debugMode = $true
 
 # トップフォルダパスの設定
 $topFolderPath = "S:\技術部共有フォルダ\★一時交換フォルダ★\S指令"
@@ -56,6 +56,7 @@ if (-not (Test-Path -Path $copyListFilePath)) {
 }
 
 # コピーリストを読み込む
+Write-Host "Loading copy list from CSV file..."
 $copyList = Import-Csv -Path $copyListFilePath -Encoding "shift_jis"
 
 # フォルダごとに比較照合
@@ -75,9 +76,11 @@ foreach ($folderPath in $folders) {
     }
 
     # ログファイルを読み込む
+    Write-Host "Reading log file: $logFilePath"
     $logEntries = Get-Content -Path $logFilePath
 
     # フォルダ内のファイル数を取得
+    Write-Host "Counting files in folder: $selectedFolderPath"
     $actualFileCount = (Get-ChildItem -Path $selectedFolderPath -File -Recurse).Count
 
     # CSVファイルのsourceFileNameの数を取得
