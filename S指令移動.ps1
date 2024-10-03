@@ -13,7 +13,12 @@ $topFolderPath = "S:\技術部共有フォルダ\★一時交換フォルダ★\
 $sourceFolderPath = Join-Path -Path $topFolderPath -ChildPath "ExpFile"
 $destinationTopFolderPath = "S:\技術部共有フォルダ\手配済みS指令[履歴]"
 $copyListFilePath = Join-Path -Path $topFolderPath -ChildPath "CopyFile20241001115247.csv"
-$logFolderPath = $topFolderPath
+$logFolderPath = Join-Path -Path $topFolderPath -ChildPath "ログ"
+
+# ログフォルダを作成
+if (-not (Test-Path -Path $logFolderPath)) {
+    New-Item -Path $logFolderPath -ItemType Directory -Force
+}
 
 # エラーログファイルのパス
 $errorLogFilePath = Join-Path -Path $logFolderPath -ChildPath "error_log.txt"
@@ -31,7 +36,7 @@ function Write-Log {
     )
     $folderName = Split-Path -Path $folderPath -Leaf
     $logFileName = "copy_log_$folderName.txt"
-    $logFilePath = Join-Path -Path $folderPath -ChildPath $logFileName
+    $logFilePath = Join-Path -Path $logFolderPath -ChildPath $logFileName
     Add-Content -Path $logFilePath -Value $message
     if ($debugMode) {
         Write-Host $message
