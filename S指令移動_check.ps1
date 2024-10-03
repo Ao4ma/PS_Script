@@ -19,7 +19,7 @@ if (-not (Test-Path -Path $checklogFolderPath)) {
 $checkerrorLogFilePath = Join-Path -Path $checklogFolderPath -ChildPath "照合error_log.txt"
 
 # 照合エラーログファイルをクリア
-if (Test-Path -Path $checkerrorLogFilePath) {
+if (Test-Path -Path $checkerrorLogFilePath)) {
     Remove-Item -Path $checkerrorLogFilePath -Force
 }
 
@@ -102,6 +102,24 @@ foreach ($folder in $folders) {
         $destinationFolder = Split-Path -Path $destinationFilePath -Parent
         if ($destinationFolder -ne $selectedFolderPath) {
             Write-CheckErrorLog "Incorrect destination folder: $destinationFolder (expected: $selectedFolderPath)"
+        }
+
+        # ファイル名の数字部分がフォルダの範囲内にあるか確認
+        $fileName = Split-Path -Path $destinationFilePath -Leaf
+        if ($fileName -match '^\D*(\d+)\D*$') {
+            $fileNumber = [int]$matches[1]
+            if ($folder -match '^\D*(\d+)\D*$') {
+                $folderNumber = [int]$matches[1]
+                if ($fileName -like 'SS*') {
+                    if ($folder -ne 'SS000000') {
+                        Write-CheckErrorLog "File $fileName should be in SS000000 folder, but found in $folder"
+                    }
+                } else {
+                    if ($fileNumber -lt $folderNumber -or $fileNumber -ge ($folderNumber + 2000)) {
+                        Write-CheckErrorLog "File $fileName is out of range for folder $folder"
+                    }
+                }
+            }
         }
     }
 
