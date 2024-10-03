@@ -4,7 +4,7 @@
 $errorHandlingFlag = 1
 
 # デバッグモードの設定
-$debugMode = $true
+$debugMode = $false
 
 # トップフォルダパスの設定
 $topFolderPath = "S:\技術部共有フォルダ\★一時交換フォルダ★\S指令"
@@ -68,7 +68,7 @@ function Get-DestinationFolder {
     } else {
         $number = [int]($fileName -replace '\D', '')
         $baseNumber = [math]::Floor($number / 2000) * 2000
-        return "S{0:D6}～" -f $baseNumber
+        return "S{0:000000}～" -f $baseNumber
     }
 }
 
@@ -122,6 +122,9 @@ foreach ($row in $copyList) {
             break
         }
     }
+
+    # 1秒待機
+    Start-Sleep -Seconds 1
 
     # デバッグモードの場合、1ループ毎に停止
     if ($debugMode) {
