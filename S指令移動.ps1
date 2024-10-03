@@ -15,14 +15,10 @@ $destinationTopFolderPath = "S:\技術部共有フォルダ\手配済みS指令[
 $copyListFilePath = Join-Path -Path $topFolderPath -ChildPath "CopyFile20241001115247.csv"
 $logFolderPath = $topFolderPath
 
-# ログファイルのパス
-$logFilePath = Join-Path -Path $logFolderPath -ChildPath "copy_log.txt"
+# エラーログファイルのパス
 $errorLogFilePath = Join-Path -Path $logFolderPath -ChildPath "error_log.txt"
 
-# ログファイルをクリア
-if (Test-Path -Path $logFilePath) {
-    Remove-Item -Path $logFilePath -Force
-}
+# エラーログファイルをクリア
 if (Test-Path -Path $errorLogFilePath) {
     Remove-Item -Path $errorLogFilePath -Force
 }
@@ -30,8 +26,12 @@ if (Test-Path -Path $errorLogFilePath) {
 # ログファイルにメッセージを追加する関数
 function Write-Log {
     param (
+        [string]$folderPath,
         [string]$message
     )
+    $folderName = Split-Path -Path $folderPath -Leaf
+    $logFileName = "copy_log_$folderName.txt"
+    $logFilePath = Join-Path -Path $folderPath -ChildPath $logFileName
     Add-Content -Path $logFilePath -Value $message
     if ($debugMode) {
         Write-Host $message
@@ -106,7 +106,7 @@ foreach ($row in $copyList) {
     if ($sourceFilePath) {
         try {
             Copy-Item -Path $sourceFilePath -Destination $destinationFilePath -Force
-            Write-Log "Copied: $sourceFilePath to $destinationFilePath"
+            Write-Log -folderPath $destinationFolderPath -message "Copied: $sourceFilePath to $destinationFilePath"
 
             # コピー先フォルダのファイル数を更新
             if ($folderFileCount.ContainsKey($destinationFolderName)) {
@@ -133,7 +133,7 @@ foreach ($row in $copyList) {
     }
 
     # 1秒待機
-    Start-Sleep -Seconds 1
+    # Start-Sleep -Seconds 0.2
 
     # デバッグモードの場合、1ループ毎に停止
     if ($debugMode) {
@@ -143,5 +143,6 @@ foreach ($row in $copyList) {
 
 # コピー先フォルダ毎のファイル数をログ出力
 foreach ($folder in $folderFileCount.Keys) {
-    Write-Log "Folder: $folder, Files copied: $($folderFileCount[$folder])"
+    $folderPath = Join-Path -Path $destinationTopFolderPath -ChildPath $folder
+    Write-Log -folderPath $folderPath -message "Folder: $folder, Files copied: $($folderFileCount[$folder])"
 }
