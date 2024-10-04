@@ -66,18 +66,19 @@ foreach ($folderPath in $folders) {
     $folder = Split-Path -Path $folderPath -Leaf
     $selectedFolderPath = Join-Path -Path $destinationTopFolderPath -ChildPath $folder
 
-    # ログファイルのパスを決定
-    $logFilePath = Join-Path -Path $logFolderPath -ChildPath "copy_log_$folder.txt"
+    # ログファイルを検索
+    Write-Host "Searching for log file for folder: $folder"
+    $logFilePath = Get-ChildItem -Path $logFolderPath -Filter "copy_log_*.txt" | Where-Object { $_.Name -like "*$folder*" } | Select-Object -First 1
 
     # ログファイルの存在を確認
-    if (-not (Test-Path -Path $logFilePath)) {
-        Write-CheckErrorLog "Log file not found: $logFilePath"
+    if (-not $logFilePath) {
+        Write-CheckErrorLog "Log file not found for folder: $folder"
         continue
     }
 
     # ログファイルを読み込む
     Write-Host "Reading log file: $logFilePath"
-    $logEntries = Get-Content -Path $logFilePath
+    $logEntries = Get-Content -Path $logFilePath.FullName
 
     # フォルダ内のファイル数を取得
     Write-Host "Counting files in folder: $selectedFolderPath"
