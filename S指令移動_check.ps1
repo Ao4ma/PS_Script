@@ -5,7 +5,7 @@ $debugMode = $true
 $topFolderPath = "S:\技術部共有フォルダ\★一時交換フォルダ★\S指令"
 
 # フォルダパスの設定
-$destinationTopFolderPath = "S:\技術部共有フォルダ\手配済みS指令`[履歴`]"
+# $destinationTopFolderPath = 'S:\技術部共有フォルダ\手配済みS指令[履歴]'
 
 # ログフォルダパスの設定
 $logFolderPath = Join-Path -Path $topFolderPath -ChildPath "ログ"
@@ -50,8 +50,27 @@ function Write-CheckErrorLog {
     }
 }
 
+$destinationFolderspath = "S:\技術部共有フォルダ\★一時交換フォルダ★\S指令\手配済みS指令[履歴]"
+
+# エスケープ文字を二重にする（正規表現時、エスケープはシングルくおーとと[]
+# $escapeddestinationFolderspath = $destinationFolderspath -replace '\[', '[[]' -replace '\]', '[]]'
+
+# エスケープ文字を二重にする（正規表現でない時の、エスケープはシングルふたつ
+# S:\技術部共有フォルダ\★一時交換フォルダ★\S指令\手配済みS指令``[履歴``]
+# 詳細な説明
+# -replace '\[', '``[':
+# 
+# '\['は正規表現で、リテラルの[を意味します。
+# '``['は、リテラルの[をエスケープするために使用します。PowerShellでは、シングルクォートを2つ連続して使用することで、シングルクォート自体を文字列の一部として扱います。
+# -replace '\]', '``]':
+# 
+# '\]'は正規表現で、リテラルの]を意味します。
+# '``]'は、リテラルの]をエスケープするために使用します。
+# 
+$escapeddestinationFolderspath = $destinationFolderspath -replace '\[', '``[' -replace '\]', '``]'
+
 # コピー先フォルダを取得
-$destinationFolders = Get-ChildItem -Path "S:\技術部共有フォルダ\手配済みS指令``[履歴``]" -Directory
+$destinationFolders = Get-ChildItem -Path $escapeddestinationFolderspath -Directory
 
 foreach ($destinationFolder in $destinationFolders) {
     $folder = $destinationFolder.Name
