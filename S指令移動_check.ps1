@@ -5,8 +5,9 @@ $debugMode = $true
 $topFolderPath = "S:\技術部共有フォルダ\★一時交換フォルダ★\S指令"
 
 # フォルダパスの設定
-$destinationTopFolderPath = "S:\技術部共有フォルダ\手配済みS指令[履歴]"
-$copyListFilePath = Join-Path -Path $topFolderPath -ChildPath "CopyFile20241001115247.csv"
+$destinationTopFolderPath = "S:\技術部共有フォルダ\手配済みS指令`[履歴`]"
+
+# ログフォルダパスの設定
 $logFolderPath = Join-Path -Path $topFolderPath -ChildPath "ログ"
 $checklogFolderPath = Join-Path -Path $topFolderPath -ChildPath "照合ログ"
 
@@ -49,26 +50,15 @@ function Write-CheckErrorLog {
     }
 }
 
-# CSVファイルの存在を確認
-if (-not (Test-Path -Path $copyListFilePath)) {
-    Write-CheckErrorLog "CSV file not found: $copyListFilePath"
-    exit
-}
+# コピー先フォルダを取得
+$destinationFolders = Get-ChildItem -Path "S:\技術部共有フォルダ\手配済みS指令``[履歴``]" -Directory
 
-# コピーリストを読み込む
-Write-Host "Loading copy list from CSV file..."
-$copyList = Import-Csv -Path $copyListFilePath -Encoding "shift_jis"
-
-# フォルダごとに比較照合
-$folders = $copyList | Select-Object -ExpandProperty 'フォルダパス' | Sort-Object -Unique
-
-foreach ($folderPath in $folders) {
-    $folder = Split-Path -Path $folderPath -Leaf
-    $selectedFolderPath = Join-Path -Path $destinationTopFolderPath -ChildPath $folder
+foreach ($destinationFolder in $destinationFolders) {
+    $folder = $destinationFolder.Name
 
     # ログファイルを検索
     Write-Host "Searching for log file for folder: $folder"
-    $logFilePath = Get-ChildItem -Path $logFolderPath -Filter "copy_log_*.txt" | Where-Object { $_.Name -match "^S\d{6}~" -or $_.Name -match "^SS\d{6}~" } | Select-Object -First 1
+    $logFilePath = Get-ChildItem -Path $logFolderPath -Filter "copy_log_$folder.txt"
 
     # ログファイルの存在を確認
     if (-not $logFilePath) {
@@ -81,14 +71,19 @@ foreach ($folderPath in $folders) {
     $logEntries = Get-Content -Path $logFilePath.FullName
 
     # フォルダ内のファイル数を取得
-    Write-Host "Counting files in folder: $selectedFolderPath"
-    $actualFileCount = (Get-ChildItem -Path $selectedFolderPath -File -Recurse).Count
+    Write-Host "Counting files in folder: $destinationFolder"
+    $actualFileCount = (Get-ChildItem -Path "$($destinationFolder.FullName)" -File -Recurse).Count
 
-    # CSVファイルのsourceFileNameの数を取得
-    $csvFileCount = ($copyList | Where-Object { $_.'フォルダパス' -eq $folderPath }).Count
+    # デバッグ用にファイルリストを表示
+    $files = Get-ChildItem -Path "$($destinationFolder.FullName)" -File -Recurse
+    Write-Host "Files in folder $($destinationFolder.FullName):"
+    foreach ($file in $files) {
+        Write-Host $file.FullName
+    }
 
-    # ログファイルの実施ログを一行ずつ確認
-    foreach ($logEntry in $logEntries) {
+    # ログファイルの実施ログを一行ずつ確認（最後の1行を除外）
+    for ($i = 0; $i -lt $logEntries.Count - 1; $i++) {
+        $logEntry = $logEntries[$i]
         $logParts = $logEntry -split '\s+'
         $sourceFilePath = $logParts[1]
         $destinationFilePath = $logParts[3]
@@ -104,9 +99,11 @@ foreach ($folderPath in $folders) {
         }
 
         # コピー先フォルダが正しいか確認
-        $destinationFolder = Split-Path -Path $destinationFilePath -Parent
-        if ($destinationFolder -ne $selectedFolderPath) {
-            Write-CheckErrorLog "Incorrect destination folder: $destinationFolder (expected: $selectedFolderPath)"
+        if ($destinationFilePath) {
+            $destinationFolderPath = Split-Path -Path $destinationFilePath -Parent
+            if ($destinationFolderPath -ne $destinationFolder.FullName) {
+                Write-CheckErrorLog "Incorrect destination folder: $destinationFolderPath (expected: $destinationFolder.FullName)"
+            }
         }
 
         # ファイル名の数字部分がフォルダの範囲内にあるか確認
@@ -128,36 +125,19 @@ foreach ($folderPath in $folders) {
         }
     }
 
-    # ログファイルの行数を取得
-    $logFileLineCount = $logEntries.Count
+    # ログファイルの行数を取得（最後の1行を除外）
+    $logFileLineCount = $logEntries.Count - 1
 
     # 比較結果を照合ログに出力
-    Write-CheckLog -folderPath $selectedFolderPath -message "Comparing log file: $logFilePath with folder: $selectedFolderPath"
-    Write-CheckLog -folderPath $selectedFolderPath -message "Actual files in folder: $actualFileCount"
-    Write-CheckLog -folderPath $selectedFolderPath -message "CSV source file count: $csvFileCount"
-    Write-CheckLog -folderPath $selectedFolderPath -message "Log file line count: $logFileLineCount"
+    Write-CheckLog -folderPath $destinationFolder.FullName -message "Comparing log file: $($logFilePath.FullName) with folder: $($destinationFolder.FullName)"
+    Write-CheckLog -folderPath $destinationFolder.FullName -message "Actual files in folder: $actualFileCount"
+    Write-CheckLog -folderPath $destinationFolder.FullName -message "Log file line count: $logFileLineCount"
 
     # ターミナル出力
-    Write-Host "Folder: $folder`tActual: $actualFileCount`tCSV: $csvFileCount`tLog lines: $logFileLineCount"
+    Write-Host "Folder: $folder`tActual: $actualFileCount`tLog lines: $logFileLineCount"
 
     # ログファイルの行数とコピー先のファイル数が一致するか確認
     if ($actualFileCount -ne $logFileLineCount) {
         Write-CheckErrorLog "Mismatch between actual file count ($actualFileCount) and log file line count ($logFileLineCount)"
     }
-}
-
-# CSVリストの内容がすべてコピーされているか確認
-$totalCsvFiles = $copyList.Count
-$totalActualFiles = (Get-ChildItem -Path $destinationTopFolderPath -File -Recurse).Count
-
-Write-CheckLog -folderPath $destinationTopFolderPath -message "Total files specified in CSV: $totalCsvFiles"
-Write-CheckLog -folderPath $destinationTopFolderPath -message "Total actual files in all folders: $totalActualFiles"
-
-# ターミナル出力
-Write-Host "Total files specified in CSV: $totalCsvFiles"
-Write-Host "Total actual files in all folders: $totalActualFiles"
-
-# CSVリストの内容がすべてコピーされているか確認
-if ($totalCsvFiles -ne $totalActualFiles) {
-    Write-CheckErrorLog "Mismatch between total files specified in CSV ($totalCsvFiles) and total actual files in all folders ($totalActualFiles)"
 }
