@@ -68,7 +68,7 @@ foreach ($folderPath in $folders) {
 
     # ログファイルを検索
     Write-Host "Searching for log file for folder: $folder"
-    $logFilePath = Get-ChildItem -Path $logFolderPath -Filter "copy_log_*.txt" | Where-Object { $_.Name -like "*$folder*" } | Select-Object -First 1
+    $logFilePath = Get-ChildItem -Path $logFolderPath -Filter "copy_log_*.txt" | Where-Object { $_.Name -match "^S\d{6}~" -or $_.Name -match "^SS\d{6}~" } | Select-Object -First 1
 
     # ログファイルの存在を確認
     if (-not $logFilePath) {
