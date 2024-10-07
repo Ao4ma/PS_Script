@@ -1,3 +1,28 @@
+#
+# PowerShellコマンドレットを使用してMS Officeドキュメントのプロパティを読み書きするスクリプト
+# rlv-danによってオンラインのさまざまなソースからコンパイルされました
+#
+# 関数:
+# - Get-OfficeDocBuiltInProperties: ドキュメントの組み込みプロパティを取得します。
+# - Get-OfficeDocBuiltInProperty: 指定された組み込みプロパティを取得します。
+# - Set-OfficeDocBuiltInProperty: 指定された組み込みプロパティを設定します。
+# - Get-OfficeDocCustomProperties: ドキュメントのカスタムプロパティを取得します。
+# - Get-OfficeDocCustomProperty: 指定されたカスタムプロパティを取得します。
+# - Set-OfficeDocCustomProperty: 指定されたカスタムプロパティを設定します。
+#
+# 使用例:
+# 1. Wordアプリケーションを開始し、ドキュメントをロードします。
+# 2. 組み込みプロパティをすべて取得します。
+# 3. 組み込みの著者プロパティに書き込みます。
+# 4. 組み込みの著者プロパティを再度読み取ります。
+# 5. カスタムプロパティをすべて取得します（新しいドキュメントの場合はなし）。
+# 6. カスタムプロパティに書き込みます。
+# 7. カスタムプロパティを再度読み取ります。
+# 8. ドキュメントを保存し、Wordを閉じます。
+#
+# 注意:
+# - このスクリプトは、Wordドキュメントのプロパティを操作するためにCOMオブジェクトを使用します。
+# - スクリプトの最後に、COMオブジェクトのリリースとガベージコレクションを行います。
 
 # PowerShell cmdlets to read & write MS Office document properties
 # Compiled by rlv-dan from various source online
@@ -154,7 +179,7 @@ function Set-OfficeDocCustomProperty {
  
 write-host "Start Word and load a document..." -Foreground Yellow
 $app = New-Object -ComObject Word.Application
-$app.visible = $true
+$app.visible = $false
 $doc = $app.Documents.Open("C:\Users\y0927\Documents\GitHub\PS_Script\技100-999.docx", $false, $false, $false)
  
 write-host "`nAll BUILT IN Properties:" -Foreground Yellow
