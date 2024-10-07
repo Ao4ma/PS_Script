@@ -22,6 +22,22 @@ write-host "Start Word and load a document..." -Foreground Yellow
 $app = New-Object -ComObject Word.Application
 $app.visible = $false
 $doc = $app.Documents.Open("C:\Users\y0927\Documents\GitHub\PS_Script\技100-999.docx", $false, $false, $false)
+
+# 1つ目のテーブルを取得
+$table = $doc.Tables.Item(1)
+
+# テーブルのプロパティを取得
+$rows = $table.Rows.Count
+$columns = $table.Columns.Count
+
+# 各セルの情報を取得
+foreach ($row in 1..$rows) {
+    foreach ($col in 1..$columns) {
+        $cell = $table.Cell($row, $col)
+        $cellText = $cell.Range.Text
+        Write-host "Row: $row, Column: $col, Text: $cellText"
+    }
+}
  
 write-host "`nAll BUILT IN Properties:" -Foreground Yellow
 Get-OfficeDocBuiltInProperties $doc
