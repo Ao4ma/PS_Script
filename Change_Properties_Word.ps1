@@ -17,6 +17,9 @@ function Remove-SealImage {
 }
 
 # . d:\OfficeProperties.ps1
+
+# Microsoft.Office.Interop.Word アセンブリをロード
+Add-Type -AssemblyName "Microsoft.Office.Interop.Word"
  
 write-host "Start Word and load a document..." -Foreground Yellow
 $app = New-Object -ComObject Word.Application
@@ -31,6 +34,7 @@ $rows = $table.Rows.Count
 $columns = $table.Columns.Count
 
 # 各セルの情報を取得
+
 foreach ($row in 1..$rows) {
     foreach ($col in 1..$columns) {
         $cell = $table.Cell($row, $col)
@@ -39,6 +43,46 @@ foreach ($row in 1..$rows) {
     }
 }
  
+
+
+# 1つ目のテーブルを取得
+# $table = $doc.Tables.Item(1)
+
+# 1つ目のセルを取得
+$cell = $table.Cell(2, 6)
+
+# セルの座標とサイズを取得
+$left = $cell.Range.Information([Microsoft.Office.Interop.Word.WdInformation]::wdHorizontalPositionRelativeToPage)
+$top = $cell.Range.Information([Microsoft.Office.Interop.Word.WdInformation]::wdVerticalPositionRelativeToPage)
+$width = $cell.Width
+$height = $cell.Height
+
+# 画像のサイズを設定
+$imageWidth = 50
+$imageHeight = 50
+
+# 画像の中央位置を計算
+$imageLeft = $left + ($width - $imageWidth) / 2
+$imageTop = $top + ($height - $imageHeight) / 2
+
+# 既存の画像を削除（もしあれば）
+foreach ($shape in $doc.Shapes) {
+    if ($shape.Type -eq [Microsoft.Office.Interop.Word.WdShapeType]::wdInlineShapePicture) {
+        $shape.Delete()
+    }
+}
+
+# 新しい画像を挿入
+$shape = $doc.Shapes.AddPicture("C:\Users\y0927\Documents\GitHub\PS_Script\社長印.tif", $false, $true, $imageLeft, $imageTop, $imageWidth, $imageHeight)
+
+# 画像のプロパティを変更
+$shape.LockAspectRatio = $false
+$shape.Width = 100
+$shape.Height = 100
+
+
+
+
 write-host "`nAll BUILT IN Properties:" -Foreground Yellow
 Get-OfficeDocBuiltInProperties $doc
  
@@ -78,11 +122,17 @@ write-host "`nAll CUSTOM Properties (none if new document):" -Foreground Yellow
 Get-OfficeDocCustomProperties $doc
 
 write-host "`nSave document and close Word..." -Foreground Yellow
+
+# ドキュメントを保存して閉じる
 $doc.Save()
 $doc.Close()
-[System.Runtime.Interopservices.Marshal]::ReleaseComObject($doc) | Out-Null
-$app.Quit()
-[System.Runtime.Interopservices.Marshal]::ReleaseComObject($app) | Out-Null
+$word.Quit()
+
+# COMオブジェクトの解放
+[System.Runtime.InteropServices.Marshal]::ReleaseComObject($shape) | Out-Null
+[System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null
+[System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null
+
 [gc]::collect()
 [gc]::WaitForPendingFinalizers()
 write-host "`nReady!" -Foreground Green
