@@ -18,8 +18,10 @@ function Remove-SealImage {
 
 # . d:\OfficeProperties.ps1
 
-# Microsoft.Office.Interop.Word アセンブリをロード
-Add-Type -AssemblyName "Microsoft.Office.Interop.Word"
+# Microsoft.Office.Interop.Word アセンブリのフルパスを指定してロード
+$assemblyPath = "C:\Windows\Microsoft.NET\assembly\GAC_MSIL\Microsoft.Office.Interop.Word\v4.0_15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.Word.dll"
+Add-Type -Path $assemblyPath
+
  
 write-host "Start Word and load a document..." -Foreground Yellow
 $app = New-Object -ComObject Word.Application
