@@ -13,8 +13,13 @@ function Get-IniContent {
         Write-Host "INIファイルが見つかりました。内容を読み込んでいます..."
         $lines = Get-Content $iniFilePath
         foreach ($line in $lines) {
-            if ($line -match "^\s*([^=]+?)\s*=\s*(.*?)\s*$") {
-                $iniContent[$matches[1].Trim()] = $matches[2].Trim()
+            if ($line -match "^\s*`"([^\`"]+?)`"\s*,\s*`"([^\`"]+?)`"\s*$") {
+                $key = $matches[1].Trim()
+                $value = $matches[2].Trim()
+                Write-Host "読み込み中: $key = $value"
+                $iniContent[$key] = $value
+            } else {
+                Write-Host "行が正しい形式ではありません: $line"
             }
         }
         Write-Host "INIファイルの内容を読み込みました。"
@@ -150,13 +155,12 @@ class WordDocumentProcessor {
 
                 try {
                     $properties = $doc.CustomDocumentProperties
+                    if ($null -eq $properties) {
+                        Write-Error "カスタムプロパティが見つかりませんでした。"
+                        return
+                    }
                 } catch {
                     Write-Error "カスタムプロパティの取得に失敗しました: $_"
-                    return
-                }
-
-                if ($null -eq $properties) {
-                    Write-Error "カスタムプロパティが見つかりませんでした。"
                     return
                 }
 
@@ -175,6 +179,7 @@ class WordDocumentProcessor {
                 } else {
                     # 新しいプロパティを追加
                     try {
+                        Write-Host "Adding new custom property: $propName = $propValue"
                         $properties.Add($propName, $false, 4, $propValue) # 4はmsoPropertyTypeString
                     } catch {
                         Write-Error "カスタムプロパティの追加に失敗しました: $_"
@@ -188,11 +193,11 @@ class WordDocumentProcessor {
 
             # 承認者プロパティを設定
             Write-Host "承認者プロパティを設定中..."
-            Set-CustomProperty -doc $doc -propName "承認者" -propValue $this.Approver
+            Set-CustomProperty -doc $doc -propName "Approver" -propValue "小谷"
 
             # 承認フラグプロパティを設定
             Write-Host "承認フラグプロパティを設定中..."
-            Set-CustomProperty -doc $doc -propName "承認フラグ" -propValue ([string]$this.ApprovalFlag)
+            Set-CustomProperty -doc $doc -propName "ApprovalFlag" -propValue "未承認"
 
             # 1つ目のテーブルを取得
             Write-Host "1つ目のテーブルを取得中..."
@@ -301,7 +306,14 @@ $filePath = $iniContent["FilePath"]
 $approver = $iniContent["Approver"]
 $approvalFlag = $false
 if ($iniContent.ContainsKey("ApprovalFlag")) {
-    $approvalFlag = [bool]::Parse($iniContent["ApprovalFlag"])
+    $approvalFlagValue = $iniContent["ApprovalFlag"]
+    if ($approvalFlagValue -eq "承認") {
+        $approvalFlag = $true
+    } elseif ($approvalFlagValue -eq "未承認") {
+        $approvalFlag = $false
+    } else {
+        Write-Host "不明なApprovalFlagの値: $approvalFlagValue"
+    }
 }
 $imagePath = $iniContent["ImagePath"]
 Write-Host "INIファイルから設定を読み込みました。"
