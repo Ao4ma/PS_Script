@@ -1,34 +1,60 @@
-#
-# PowerShellコマンドレットを使用してMS Officeドキュメントのプロパティを読み書きするスクリプト
-# rlv-danによってオンラインのさまざまなソースからコンパイルされました
-#
-# 関数:
-# - Get-OfficeDocBuiltInProperties: ドキュメントの組み込みプロパティを取得します。
-# - Get-OfficeDocBuiltInProperty: 指定された組み込みプロパティを取得します。
-# - Set-OfficeDocBuiltInProperty: 指定された組み込みプロパティを設定します。
-# - Get-OfficeDocCustomProperties: ドキュメントのカスタムプロパティを取得します。
-# - Get-OfficeDocCustomProperty: 指定されたカスタムプロパティを取得します。
-# - Set-OfficeDocCustomProperty: 指定されたカスタムプロパティを設定します。
-#
-# 使用例:
-# 1. Wordアプリケーションを開始し、ドキュメントをロードします。
-# 2. 組み込みプロパティをすべて取得します。
-# 3. 組み込みの著者プロパティに書き込みます。
-# 4. 組み込みの著者プロパティを再度読み取ります。
-# 5. カスタムプロパティをすべて取得します（新しいドキュメントの場合はなし）。
-# 6. カスタムプロパティに書き込みます。
-# 7. カスタムプロパティを再度読み取ります。
-# 8. ドキュメントを保存し、Wordを閉じます。
-#
-# 注意:
-# - このスクリプトは、Wordドキュメントのプロパティを操作するためにCOMオブジェクトを使用します。
-# - スクリプトの最後に、COMオブジェクトのリリースとガベージコレクションを行います。
+# GACをチェックしてMicrosoft.Office.Interop.Wordが存在するか確認
+$assemblyName = "Microsoft.Office.Interop.Word"
+$scriptPath = $MyInvocation.MyCommand.Path
+$iniFilePath = [System.IO.Path]::ChangeExtension($scriptPath, ".ini")
 
-# PowerShell cmdlets to read & write MS Office document properties
-# Compiled by rlv-dan from various source online
- # Microsoft.Office.Interop.Word アセンブリのフルパスを指定してロード
+# INIファイルからアセンブリパスを読み込む
+if (Test-Path $iniFilePath) {
+    $assemblyPath = Get-Content $iniFilePath
+} else {
+    $assemblyPath = $null
+}
 
-$assemblyPath = "C:\Windows\Microsoft.NET\assembly\GAC_MSIL\Microsoft.Office.Interop.Word\v4.0_15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.Word.dll"
+if (-not $assemblyPath -or -not (Test-Path $assemblyPath)) {
+    Write-Output "$assemblyName is not found in INI file or path does not exist. Searching in Windows directory..."
+
+    # Windowsディレクトリ下をサーチ
+    $assemblyPath = Get-ChildItem -Path "C:\Windows\assembly\GAC_MSIL" -Recurse -Filter "Microsoft.Office.Interop.Word.dll" | Select-Object -First 1 -ExpandProperty FullName
+
+    if (-not $assemblyPath) {
+        Write-Output "$assemblyName is not found in Windows directory. Installing from NuGet..."
+
+        # NuGetプロバイダーのインストール
+        if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+            Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
+            Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+        }
+
+        # Microsoft.Office.Interop.Wordのインストール
+        if (-not (Get-Package -Name Microsoft.Office.Interop.Word -ErrorAction SilentlyContinue)) {
+            Install-Package -Name Microsoft.Office.Interop.Word -Source nuget.org -Scope CurrentUser
+        }
+
+        # パッケージのインポート
+        Add-Type -AssemblyName "Microsoft.Office.Interop.Word"
+    } else {
+        Write-Output "$assemblyName is found in Windows directory. Using the existing assembly."
+
+        # 発見したアセンブリパスをINIファイルに書き込む
+        Set-Content -Path $iniFilePath -Value $assemblyPath
+
+        # 既存のアセンブリを使用
+        Add-Type -Path $assemblyPath
+    }
+} else {
+    Write-Output "$assemblyName is found in INI file. Using the existing assembly."
+
+    # 既存のアセンブリを使用
+    Add-Type -Path $assemblyPath
+}
+
+# Microsoft.Office.Interop.Word アセンブリのパスを手動で指定
+# $assemblyPath = "C:\Windows\assembly\GAC_MSIL\Microsoft.Office.Interop.Word\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.Word.dll"
+
+if (-Not (Test-Path $assemblyPath)) {
+    Write-Host "Assembly path does not exist: $assemblyPath" -Foreground Red
+    exit
+}
 Add-Type -Path $assemblyPath
 
 function Get-OfficeDocBuiltInProperties {
@@ -97,7 +123,6 @@ function Set-OfficeDocBuiltInProperty {
         return $false
     }
 }
- 
  
 function Get-OfficeDocCustomProperties {
     [OutputType([HashTable])]
@@ -178,45 +203,54 @@ function Set-OfficeDocCustomProperty {
     }
 }
 
-
-# . d:\OfficeProperties.ps1
- 
-write-host "Start Word and load a document..." -Foreground Yellow
+# デバッグ情報の追加
+Write-Host "Start Word and load a document..." -Foreground Yellow
 $app = New-Object -ComObject Word.Application
 $app.visible = $false
-$doc = $app.Documents.Open("C:\Users\y0927\Documents\GitHub\PS_Script\技100-999.docx", $false, $false, $false)
+Write-Host "Word application started."
 
+$docPath = "C:\Users\y0927\Documents\GitHub\PS_Script\技100-999.docx"
+if (Test-Path $docPath) {
+    Write-Host "Document path exists: $docPath"
+    $doc = $app.Documents.Open($docPath, $false, $false, $false)
+    Write-Host "Document opened: $docPath"
+} else {
+    Write-Host "Document path does not exist: $docPath" -Foreground Red
+    exit
+}
 
 # 1つ目のテーブルを取得
 $table = $doc.Tables.Item(1)
+Write-Host "First table retrieved."
 
 # テーブルのプロパティを取得
 $rows = $table.Rows.Count
 $columns = $table.Columns.Count
+Write-Host "Table properties retrieved: Rows=$rows, Columns=$columns"
 
 # 各セルの情報を取得
-
 foreach ($row in 1..$rows) {
     foreach ($col in 1..$columns) {
-        $cell = $table.Cell($row, $col)
-        $cellText = $cell.Range.Text
-        Write-host "Row: $row, Column: $col, Text: $cellText"
+        try {
+            $cell = $table.Cell($row, $col)
+            $cellText = $cell.Range.Text
+            Write-Host "Row: $row, Column: $col, Text: $cellText"
+        } catch {
+            Write-Host "Row: $row, Column: $col, Text: (cell not found)" -Foreground Red
+        }
     }
 }
- 
-
-
-# 1つ目のテーブルを取得
-# $table = $doc.Tables.Item(1)
 
 # 1つ目のセルを取得
 $cell = $table.Cell(2, 6)
+Write-Host "Cell (2, 6) retrieved."
 
 # セルの座標とサイズを取得
 $left = $cell.Range.Information([Microsoft.Office.Interop.Word.WdInformation]::wdHorizontalPositionRelativeToPage)
 $top = $cell.Range.Information([Microsoft.Office.Interop.Word.WdInformation]::wdVerticalPositionRelativeToPage)
 $width = $cell.Width
 $height = $cell.Height
+Write-Host "Cell coordinates and size retrieved: Left=$left, Top=$top, Width=$width, Height=$height"
 
 # 画像のサイズを設定
 $imageWidth = 50
@@ -228,22 +262,21 @@ $imageTop = $top + ($height - $imageHeight) / 2
 
 # 既存の画像を削除（もしあれば）
 foreach ($shape in $doc.Shapes) {
-    if ($shape.Type -eq [Microsoft.Office.Interop.Word.WdShapeType]::wdInlineShapePicture) {
+    if ($shape.Type -eq [Microsoft.Office.Interop.Word.WdInlineShapeType]::wdInlineShapePicture) {
         $shape.Delete()
     }
 }
+Write-Host "Existing images deleted."
 
 # 新しい画像を挿入
 $shape = $doc.Shapes.AddPicture("C:\Users\y0927\Documents\GitHub\PS_Script\社長印.tif", $false, $true, $imageLeft, $imageTop, $imageWidth, $imageHeight)
+Write-Host "New image inserted."
 
 # 画像のプロパティを変更
 $shape.LockAspectRatio = $false
-$shape.Width = 100
-$shape.Height = 100
-
-
-
-
+$shape.Width = 50
+$shape.Height = 50
+Write-Host "Image properties modified."
 
 write-host "`nAll BUILT IN Properties:" -Foreground Yellow
 Get-OfficeDocBuiltInProperties $doc
@@ -275,21 +308,29 @@ write-host "Result: $result"
 write-host "`2 nAll CUSTOM Properties (none if new document):" -Foreground Yellow
 Get-OfficeDocCustomProperties $doc
 
-
 write-host "`nAll CUSTOM Properties (none if new document):" -Foreground Yellow
 Get-OfficeDocCustomProperties $doc
 
-
-
-
 write-host "`nSave document and close Word..." -Foreground Yellow
+
+# ファイルが読み取り専用でないことを確認
+if (-not (Test-Path $docPath -PathType Leaf -ErrorAction SilentlyContinue)) {
+    Write-Host "File is read-only: $docPath" -Foreground Red
+    exit
+}
+
+# ドキュメントを保存して閉じる
 $doc.Save()
 $doc.Close()
 [System.Runtime.Interopservices.Marshal]::ReleaseComObject($doc) | Out-Null
+
+# アプリケーションを終了する
 $app.Quit()
 [System.Runtime.Interopservices.Marshal]::ReleaseComObject($app) | Out-Null
+
+# ガベージコレクションを実行して、未解放のCOMオブジェクトを解放する
 [gc]::collect()
 [gc]::WaitForPendingFinalizers()
+
+# 処理完了メッセージを表示
 write-host "`nReady!" -Foreground Green
-
-
