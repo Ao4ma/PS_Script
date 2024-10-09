@@ -1,5 +1,6 @@
 # INIファイルのパス
 $scriptPath = $MyInvocation.MyCommand.Path
+Set-Location -Path ([System.IO.Path]::GetDirectoryName($scriptPath))
 $iniFilePath = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($scriptPath), "config_Change_Properties_Word.ini")
 
 # INIファイルから設定を読み込む関数
@@ -13,13 +14,21 @@ function Get-IniContent {
         Write-Host "INIファイルが見つかりました。内容を読み込んでいます..."
         $lines = Get-Content $iniFilePath
         foreach ($line in $lines) {
+            if ($line -match "^\s*#") {
+            Write-Host "コメント行を読み飛ばしています: $line"
+            continue
+            }
+            if ($line -match "^\s*$") {
+            Write-Host "空行を読み飛ばしています。"
+            continue
+            }
             if ($line -match "^\s*`"([^\`"]+?)`"\s*,\s*`"([^\`"]+?)`"\s*$") {
-                $key = $matches[1].Trim()
-                $value = $matches[2].Trim()
-                Write-Host "読み込み中: $key = $value"
-                $iniContent[$key] = $value
+            $key = $matches[1].Trim()
+            $value = $matches[2].Trim()
+            Write-Host "読み込み中: $key = $value"
+            $iniContent[$key] = $value
             } else {
-                Write-Host "行が正しい形式ではありません: $line"
+            Write-Host "行が正しい形式ではありません: $line"
             }
         }
         Write-Host "INIファイルの内容を読み込みました。"
