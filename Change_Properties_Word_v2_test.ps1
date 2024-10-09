@@ -1,4 +1,3 @@
-Write-Host "Start .."
 # INIファイルのパス
 $scriptPath = $MyInvocation.MyCommand.Path
 $iniFilePath = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($scriptPath), "config_Change_Properties_Word.ini")
@@ -36,26 +35,25 @@ class WordDocumentProcessor {
     [string]$Approver
     [bool]$ApprovalFlag
     [string]$ImagePath
+    [string]$IniFilePath
 
-    WordDocumentProcessor([string]$filePath, [string]$approver, [bool]$approvalFlag, [string]$imagePath) {
+    WordDocumentProcessor([string]$filePath, [string]$approver, [bool]$approvalFlag, [string]$imagePath, [string]$iniFilePath) {
         Write-Host "WordDocumentProcessorのコンストラクタを実行中..."
         $this.FilePath = $filePath
         $this.Approver = $approver
         $this.ApprovalFlag = $approvalFlag
         $this.ImagePath = $imagePath
+        $this.IniFilePath = $iniFilePath
         Write-Host "WordDocumentProcessorのコンストラクタが完了しました。"
     }
 
     [void] ImportInteropAssembly() {
         $assemblyName = "Microsoft.Office.Interop.Word"
-        $scriptPath = $MyInvocation.MyCommand.Path
-        $iniFilePath = [System.IO.Path]::ChangeExtension($scriptPath, ".ini")
-
         Write-Host "ImportInteropAssemblyメソッドを実行中..."
 
         # INIファイルからアセンブリパスを読み込む
-        if (Test-Path $iniFilePath) {
-            $assemblyPath = Get-Content $iniFilePath
+        if (Test-Path $this.IniFilePath) {
+            $assemblyPath = Get-Content $this.IniFilePath
         } else {
             $assemblyPath = $null
         }
@@ -73,7 +71,7 @@ class WordDocumentProcessor {
 
                 if ($assemblyPath) {
                     Write-Host "$assemblyName is found in Windows directory. Using the existing assembly."
-                    Set-Content -Path $iniFilePath -Value $assemblyPath
+                    Set-Content -Path $this.IniFilePath -Value $assemblyPath
                     Add-Type -Path $assemblyPath
                 } else {
                     Write-Host "$assemblyName is not found in Windows directory. Installing from NuGet..."
@@ -87,7 +85,7 @@ class WordDocumentProcessor {
                     # Microsoft.Office.Interop.Wordのインストール
                     Install-Package -Name "Microsoft.Office.Interop.Word" -Source "PSGallery" -Scope CurrentUser -Force
                     $assemblyPath = (Get-Package -Name "Microsoft.Office.Interop.Word" -Source "PSGallery").Source
-                    Set-Content -Path $iniFilePath -Value $assemblyPath
+                    Set-Content -Path $this.IniFilePath -Value $assemblyPath
                     Add-Type -Path $assemblyPath
                 }
             }
@@ -156,6 +154,11 @@ class WordDocumentProcessor {
                     return
                 }
 
+                if ($null -eq $properties) {
+                    Write-Error "カスタムプロパティが見つかりませんでした。"
+                    return
+                }
+
                 $property = $null
 
                 # 既存のカスタムプロパティをチェック
@@ -192,8 +195,13 @@ class WordDocumentProcessor {
 
             # 1つ目のテーブルを取得
             Write-Host "1つ目のテーブルを取得中..."
-            $table = $doc.Tables.Item(1)
-            Write-Host "First table retrieved."
+            try {
+                $table = $doc.Tables.Item(1)
+                Write-Host "First table retrieved."
+            } catch {
+                Write-Error "テーブルの取得に失敗しました: $_"
+                return
+            }
 
             # テーブルのプロパティを取得
             $rows = $table.Rows.Count
@@ -219,8 +227,8 @@ class WordDocumentProcessor {
             Write-Host "Cell (2, 6) retrieved."
 
             # セルの座標とサイズを取得
-            $left = $cell.Range.Information([Microsoft.Office.Interop.Word.WdInformation]::wdHorizontalPositionRelativeToPage)
-            $top = $cell.Range.Information([Microsoft.Office.Interop.Word.WdInformation]::wdVerticalPositionRelativeToPage)
+            $left = $cell.Range.Information(1) # 1 corresponds to wdHorizontalPositionRelativeToPage
+            $top = $cell.Range.Information(2) # 2 corresponds to wdVerticalPositionRelativeToPage
             $width = $cell.Width
             $height = $cell.Height
             Write-Host "Cell coordinates and size retrieved: Left=$left, Top=$top, Width=$width, Height=$height"
@@ -236,7 +244,7 @@ class WordDocumentProcessor {
             # 既存の画像を削除（もしあれば）
             Write-Host "既存の画像を削除中..."
             foreach ($shape in $doc.Shapes) {
-                if ($shape.Type -eq [Microsoft.Office.Interop.Word.WdInlineShapeType]::wdInlineShapePicture) {
+                if ($shape.Type -eq 3) { # 3 corresponds to wdInlineShapePicture
                     $shape.Delete()
                 }
             }
@@ -299,7 +307,7 @@ Write-Host "INIファイルから設定を読み込みました。"
 
 # クラスのインスタンスを作成して処理を実行
 Write-Host "WordDocumentProcessorクラスのインスタンスを作成しています..."
-$processor = [WordDocumentProcessor]::new($filePath, $approver, $approvalFlag, $imagePath)
+$processor = [WordDocumentProcessor]::new($filePath, $approver, $approvalFlag, $imagePath, $iniFilePath)
 Write-Host "WordDocumentProcessorクラスのインスタンスを作成しました。"
 Write-Host "ProcessDocumentメソッドを呼び出しています..."
 $processor.ProcessDocument()
