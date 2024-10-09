@@ -14,11 +14,11 @@ function Import-InteropAssembly {
     }
 
     switch ($true) {
-        ($assemblyPath -and (Test-Path $assemblyPath)): {
+        ($assemblyPath -and (Test-Path $assemblyPath)) {
             Write-Output "$assemblyName is found in INI file. Using the existing assembly."
             Add-Type -Path $assemblyPath
         }
-        ($null -eq $assemblyPath -or -not (Test-Path $assemblyPath)): {
+        ($null -eq $assemblyPath -or -not (Test-Path $assemblyPath)) {
             Write-Output "$assemblyName is not found in INI file or path does not exist. Searching in Windows directory..."
 
             # Windowsディレクトリ下をサーチ
@@ -60,6 +60,7 @@ function Import-InteropAssembly {
 
 # GACをチェックしてMicrosoft.Office.Interop.Wordが存在するか確認
 Import-InteropAssembly
+
 function Get-ConfigValue {
     Param (
         [string]$key,
