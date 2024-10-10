@@ -11,10 +11,11 @@ class PC {
     [string]$IPAddress
     [string]$MACAddress
 
-    PC([string]$name) {
+    PC([string]$name, [string]$iniFilePath) {
         $this.Name = $name
         $this.IPAddress = $this.GetIPAddress()
         $this.MACAddress = $this.GetMACAddress()
+        $this.Import_InteropAssembly($iniFilePath)
     }
 
     [void]DisplayInfo() {
@@ -337,6 +338,7 @@ class Word {
 
 function ProcessDocument {
     param (
+        [PC]$pc,
         [string]$filePath,
         [string]$approver,
         [bool]$approvalFlag,
@@ -348,9 +350,6 @@ function ProcessDocument {
         Write-Error "ファイルパスが無効です: $filePath"
         return
     }
-
-    $pc = [PC]::new("DELLD033")
-    $pc.Import_InteropAssembly($iniFilePath)
 
     # スクリプト実行前に存在していたWordプロセスを取得
     $existingWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
@@ -404,7 +403,7 @@ function ProcessDocument {
 
 # PCクラスのインスタンスを作成し、スクリプトのあるフォルダに移動
 $PcName = "DELLD033"
-$pc = [PC]::new($PcName)
+$pc = [PC]::new($PcName, $iniFilePath)
 $pc.ChangeToScriptDirectory()
 
 # デバッグ用変数
@@ -415,4 +414,4 @@ $imagePath = Join-Path -Path (Get-Location) -ChildPath "社長印.tif"
 $iniFilePath = Join-Path -Path (Get-Location) -ChildPath "config_Change_Properties_Word.ini"
 
 # メインスクリプト
-ProcessDocument -filePath $filePath -approver $approver -approvalFlag $approvalFlag -imagePath $imagePath -iniFilePath $iniFilePath
+ProcessDocument -pc $pc -filePath $filePath -approver $approver -approvalFlag $approvalFlag -imagePath $imagePath -iniFilePath $iniFilePath
