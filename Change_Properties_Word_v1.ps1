@@ -109,6 +109,7 @@ class WordDocumentProcessor {
         Write-Host "ImportInteropAssemblyメソッドが完了しました。"
     }
 
+    
     [void] ProcessDocument() {
         Write-Host "ProcessDocumentメソッドを実行中..."
         $this.ImportInteropAssembly()
@@ -161,7 +162,7 @@ class WordDocumentProcessor {
                     [string]$propName,
                     [object]$propValue
                 )
-
+            
                 try {
                     $properties = $doc.CustomDocumentProperties
                     if ($null -eq $properties) {
@@ -172,30 +173,49 @@ class WordDocumentProcessor {
                     Write-Error "カスタムプロパティの取得に失敗しました: $_"
                     return
                 }
-
-                $property = $null
-
+            
+                # カスタムプロパティの一覧を表示（デバッグ用）
+                foreach ($property in $properties) {
+                    Write-Host "Property Name: $($property.Name), Property Value: $($property.Value)"
+                }
+            
                 # 既存のカスタムプロパティをチェック
                 try {
                     $property = $properties.Item($propName)
+                    Write-Host "Property found: $($property.Name), Value: $($property.Value)"
                 } catch {
                     # プロパティが存在しない場合は例外が発生するので無視
+                    Write-Host "Property '$propName' not found."
+                    $property = $null
                 }
-
+            
                 if ($null -ne $property) {
-                    # 既存のプロパティを更新
-                    $property.Value = $propValue
+                    if ($null -eq $propValue) {
+                        # プロパティを削除
+                        try {
+                            Write-Host "Deleting custom property: $propName"
+                            $properties.Remove($propName)
+                        } catch {
+                            Write-Error "カスタムプロパティの削除に失敗しました: $_"
+                        }
+                    } else {
+                        # 既存のプロパティを更新
+                        Write-Host "Updating custom property: $propName = $propValue"
+                        $property.Value = $propValue
+                    }
                 } else {
-                    # 新しいプロパティを追加
-                    try {
-                        Write-Host "Adding new custom property: $propName = $propValue"
-                        $properties.Add($propName, $false, 4, $propValue) # 4はmsoPropertyTypeString
-                    } catch {
-                        Write-Error "カスタムプロパティの追加に失敗しました: $_"
+                    if ($null -ne $propValue) {
+                        # 新しいプロパティを追加
+                        try {
+                            Write-Host "Adding new custom property: $propName = $propValue"
+                            $properties.Add($propName, $false, 4, $propValue) # 4はmsoPropertyTypeString
+                        } catch {
+                            Write-Error "カスタムプロパティの追加に失敗しました: $_"
+                        }
                     }
                 }
             }
-
+            
             # 文書プロパティを表示
             Write-Host "現在の文書プロパティ:"
             Get-DocumentProperties -doc $doc
