@@ -238,8 +238,8 @@ class Word {
     [hashtable]GetCustomProperties() {
         $properties = @{}
         try {
-            $customProperties = $this.Document.CustomDocumentProperties
-            foreach ($property in $customProperties) {
+            $this.CustomProperties = $this.Document.CustomDocumentProperties
+            foreach ($property in $this.CustomProperties) {
                 $properties[$property.Name] = $property.Value
             }
         } catch {
@@ -379,7 +379,7 @@ function ProcessDocument {
         # 文書プロパティを表示
         Write-Host "現在の文書プロパティ:"
         foreach ($key in $word.DocumentProperties.Keys) {
-            Write-Host "$key: $($word.DocumentProperties[$key])"
+            Write-Host "$($key): $($word.DocumentProperties[$key])"
         }
 
         # 承認者プロパティを設定
