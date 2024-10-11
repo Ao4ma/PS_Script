@@ -251,6 +251,7 @@ class Word {
     [hashtable]GetDocumentProperties([string]$filePath) {
         $properties = @{}
         try {
+<#
             $itemProperties = Get-ItemProperty -Path $filePath
             $properties["Author"] = $itemProperties.Author
             $properties["Title"] = $itemProperties.Title
@@ -260,6 +261,13 @@ class Word {
             $properties["Comments"] = $itemProperties.Comments
             $properties["RevisionNumber"] = $itemProperties.RevisionNumber
             $properties["Version"] = $itemProperties.Version
+#>
+    # ビルトインプロパティを取得
+            $properties = $this.Document.BuiltInDocumentProperties
+                foreach ($property in $properties) {
+                    Write-host "$($property.Name): $($property.Value)"
+                }
+
         } catch {
             Write-Warning "Failed to get document properties: $_"
         }
