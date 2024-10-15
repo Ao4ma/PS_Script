@@ -33,12 +33,12 @@ function ProcessDocument {
 
     # Wordアプリケーションを起動
     Write-Host "Wordアプリケーションを起動中..."
-    $wordInstanceData = [WordInstanceData]::new($filePath, $pc)
+    $word = [Word]::new($filePath, $pc)
 
     try {
         # 文書プロパティを表示
         Write-Host "現在の文書プロパティ:"
-        foreach ($property in $wordInstanceData.DocumentProperties) {
+        foreach ($property in $word.DocumentProperties) {
             Write-Host "$($property.Key): $($property.Value)"
         }
 
@@ -56,13 +56,13 @@ function ProcessDocument {
         # $wordInstanceData.ImageHandler.ProcessImage($imagePath)
 
         # カスタムオブジェクトを作成して表示
-        $docProperties = $wordInstanceData.GetCustomObject()
+        $docProperties = $word.GetCustomObject()
         $docProperties
 
         # ドキュメントを保存して閉じる
         Write-Host "ドキュメントを保存して閉じています..."
-        $wordInstanceData.Save()
-        $wordInstanceData.Close()
+        $word.Save()
+        $word.Close()
     } 
     catch {
         Write-Error "エラーが発生しました: $_"
@@ -83,7 +83,10 @@ function ProcessDocument {
 # メイン処理
 
 # PCクラスのインスタンスを作成し、スクリプトのあるフォルダに移動
-$PcName = "DELLD033"
+$PcName = (hostname)
+if (-not $PcName) {
+    $PcName = "delld033"
+}
 $pc = [PC]::new($PcName, $iniFilePath)
 Set-Location -Path $scriptFolderPath
 
