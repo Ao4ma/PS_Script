@@ -1,6 +1,4 @@
 param (
-    [string]$approver,
-    [bool]$approvalFlag,
     [string]$imagePath
 )
 
@@ -35,38 +33,38 @@ function ProcessDocument {
 
     # Wordアプリケーションを起動
     Write-Host "Wordアプリケーションを起動中..."
-    $word = [Word]::new($filePath, $pc)
+    $wordInstanceData = [WordInstanceData]::new($filePath, $pc)
 
     try {
         # 文書プロパティを表示
         Write-Host "現在の文書プロパティ:"
-        foreach ($key in $word.DocumentProperties.Keys) {
-            Write-Host "$($key): $($word.DocumentProperties[$key])"
+        foreach ($property in $wordInstanceData.DocumentProperties) {
+            Write-Host "$($property.Key): $($property.Value)"
         }
 
         # 承認者プロパティを設定
-        Write-Host "承認者プロパティを設定中..."
-        $word.SetCustomProperty("Approver", $approver)
+        # Write-Host "承認者プロパティを設定中..."
+        # $wordInstanceData.SetCustomProperty("Approver", $approver)
 
         # 承認フラグプロパティを設定
-        Write-Host "承認フラグプロパティを設定中..."
-        $word.SetCustomProperty("ApprovalFlag", ($approvalFlag ? "承認" : "未承認"))
+        # $wordInstanceData.SetCustomProperty("ApprovalFlag", ($approvalFlag ? "承認" : "未承認"))
 
         # テーブル処理
-        $word.TableHandler.ProcessTable()
+        # $wordInstanceData.TableHandler.ProcessTable()
 
         # 画像処理
-        $word.ImageHandler.ProcessImage($imagePath)
+        # $wordInstanceData.ImageHandler.ProcessImage($imagePath)
 
         # カスタムオブジェクトを作成して表示
-        $docProperties = $word.GetCustomObject()
+        $docProperties = $wordInstanceData.GetCustomObject()
         $docProperties
 
         # ドキュメントを保存して閉じる
         Write-Host "ドキュメントを保存して閉じています..."
-        $word.Document.Save()
-        $word.Close()
-    } catch {
+        $wordInstanceData.Save()
+        $wordInstanceData.Close()
+    } 
+    catch {
         Write-Error "エラーが発生しました: $_"
     } finally {
         # スクリプト実行後に存在するWordプロセスを取得
@@ -96,6 +94,11 @@ $iniContent = $iniFile.GetContent()
 # INIファイルから設定を読み込む
 $docFileName = $iniContent["DocFile"]["DocFileName"]
 $docFilePath = $iniContent["DocFile"]["DocFilePath"]
+
+# 余分な引用符を削除
+$docFilePath = $docFilePath.Trim('"')
+$docFileName = $docFileName.Trim('"')
+
 $filePath = Join-Path -Path $docFilePath -ChildPath $docFileName
 
 # ドキュメントを処理
