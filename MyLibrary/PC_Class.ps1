@@ -78,31 +78,34 @@ class PC {
         }
     }
 
-    [bool] CheckLibraryConfiguration() {
-        Write-Host "Entering CheckLibraryConfiguration method"
-        
-        # デバッグ情報: IniContentの内容を表示
-        Write-Host "IniContent:"
-        $this.IniContent.GetEnumerator() | ForEach-Object { Write-Host "$($_.Key) = $($_.Value)" }
-        
-        try {
-            Write-Host "Entering try block"
-            if ($this.IniContent.ContainsKey("LibraryName") -and $this.IniContent.ContainsKey("LibraryPath")) {
-                $libraryPath = $this.IniContent["LibraryPath"]
-                if (Test-Path $libraryPath) {
-                    Add-Type -Path $libraryPath
-                    Write-Host "Imported Interop Assembly from $libraryPath"
-                    return $true
-                } else {
-                    Write-Warning "Interop Assembly path is invalid or not found: $libraryPath"
-                    return $false
-                }
+ [bool] CheckLibraryConfiguration() {
+    Write-Output "Entering CheckLibraryConfiguration method"
+    
+    # デバッグ情報: IniContentの内容を表示
+    Write-Output "IniContent:"
+    $this.IniContent.GetEnumerator() | ForEach-Object { Write-Output "$($_.Key) = $($_.Value)" }
+    
+    try {
+        Write-Output "Entering try block"
+        if ($this.IniContent.ContainsKey("LibraryName") -and $this.IniContent.ContainsKey("LibraryPath")) {
+            Write-Output "LibraryName and LibraryPath found in IniContent"
+            $libraryPath = $this.IniContent["LibraryPath"]
+            Write-Output "LibraryPath: $libraryPath"
+            if (Test-Path $libraryPath) {
+                Write-Output "LibraryPath exists"
+                Add-Type -Path $libraryPath
+                Write-Output "Imported Interop Assembly from $libraryPath"
+                return $true
             } else {
-                Write-Host "LibraryName or LibraryPath not found in IniContent"
+                Write-Warning "Interop Assembly path is invalid or not found: $libraryPath"
+                return $false
             }
-        } catch {
-            Write-Error "Error in CheckLibraryConfiguration: $_"
+        } else {
+            Write-Output "LibraryName or LibraryPath not found in IniContent"
         }
-        return $false
+    } catch {
+        Write-Error "Error in CheckLibraryConfiguration: $_"
     }
+    return $false
+}
 }
