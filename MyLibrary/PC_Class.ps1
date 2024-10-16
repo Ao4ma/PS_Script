@@ -78,8 +78,8 @@ class PC {
         }
     }
 
-[bool] CheckLibraryConfiguration() {
-        if ($this.IniContent.ContainsKey("LibraryPath")) {
+    [bool] CheckLibraryConfiguration() {
+        if ($this.IniContent.ContainsKey("LibraryName") -and $this.IniContent.ContainsKey("LibraryPath")) {
             $libraryPath = $this.IniContent["LibraryPath"]
             if (Test-Path $libraryPath) {
                 Add-Type -Path $libraryPath
@@ -89,9 +89,7 @@ class PC {
                 Write-Warning "Interop Assembly path is invalid or not found: $libraryPath"
                 return $false
             }
-        } else {
-            Write-Warning "LibraryPath key not found in INI content"
-            return $false
         }
+        return $false
     }
 }

@@ -61,7 +61,6 @@ function ProcessDocument {
 
         # ドキュメントを保存して閉じる
         Write-Host "ドキュメントを保存して閉じています..."
-        $word.Save()
         $word.Close()
     } 
     catch {
