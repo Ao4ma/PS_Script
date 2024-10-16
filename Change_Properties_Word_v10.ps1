@@ -1,7 +1,3 @@
-param (
-    [string]$imagePath
-)
-
 # Set the full path for MyLibrary and join the path for PC_Class.ps1, Word_Class.ps1, and Ini_Class.ps1
 $scriptFolderPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 $myLibraryPath = Join-Path -Path $scriptFolderPath -ChildPath "MyLibrary"
@@ -87,6 +83,7 @@ if (-not $PcName) {
     $PcName = "delld033"
 }
 $pc = [PC]::new($PcName, $iniFilePath)
+
 Set-Location -Path $scriptFolderPath
 
 # INIファイルのインスタンスを作成し、設定を読み込む
