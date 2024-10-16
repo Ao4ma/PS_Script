@@ -109,5 +109,4 @@ ProcessDocument -pc $pc -filePath $filePath
 # INIファイルに設定を書き込む（必要に応じて）
 $iniContent["DocFile"]["DocFileName"] = [System.IO.Path]::GetFileName($filePath)
 $iniContent["DocFile"]["DocFilePath"] = [System.IO.Path]::GetDirectoryName($filePath)
-$iniContent["Approver"] = $approver
 $iniFile.SetContent($iniContent)

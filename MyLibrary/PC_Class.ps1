@@ -79,16 +79,29 @@ class PC {
     }
 
     [bool] CheckLibraryConfiguration() {
-        if ($this.IniContent.ContainsKey("LibraryName") -and $this.IniContent.ContainsKey("LibraryPath")) {
-            $libraryPath = $this.IniContent["LibraryPath"]
-            if (Test-Path $libraryPath) {
-                Add-Type -Path $libraryPath
-                Write-Host "Imported Interop Assembly from $libraryPath"
-                return $true
+        Write-Host "Entering CheckLibraryConfiguration method"
+        
+        # デバッグ情報: IniContentの内容を表示
+        Write-Host "IniContent:"
+        $this.IniContent.GetEnumerator() | ForEach-Object { Write-Host "$($_.Key) = $($_.Value)" }
+        
+        try {
+            Write-Host "Entering try block"
+            if ($this.IniContent.ContainsKey("LibraryName") -and $this.IniContent.ContainsKey("LibraryPath")) {
+                $libraryPath = $this.IniContent["LibraryPath"]
+                if (Test-Path $libraryPath) {
+                    Add-Type -Path $libraryPath
+                    Write-Host "Imported Interop Assembly from $libraryPath"
+                    return $true
+                } else {
+                    Write-Warning "Interop Assembly path is invalid or not found: $libraryPath"
+                    return $false
+                }
             } else {
-                Write-Warning "Interop Assembly path is invalid or not found: $libraryPath"
-                return $false
+                Write-Host "LibraryName or LibraryPath not found in IniContent"
             }
+        } catch {
+            Write-Error "Error in CheckLibraryConfiguration: $_"
         }
         return $false
     }
