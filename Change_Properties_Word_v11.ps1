@@ -2,86 +2,113 @@
 $scriptFolderPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $iniFilePath = Join-Path -Path $scriptFolderPath -ChildPath "config_Change_Properties_Word.ini"
 
-# IniFileクラスを読み込む
-. "C:\Users\y0927\Documents\GitHub\PS_Script\MyLibrary\Ini_Class.ps1"
+class Main {
+    [PC]$pc
+    [IniFile]$ini
+    [string]$filePath
 
-# PCクラスを読み込む
-. "C:\Users\y0927\Documents\GitHub\PS_Script\MyLibrary\PC_Class.ps1"
+    Main() {
+        # PCクラスのインスタンスを作成
+        $this.pc = [PC]::new()
 
-# Wordクラスを読み込む
-. "C:\Users\y0927\Documents\GitHub\PS_Script\MyLibrary\Word_Class.ps1"
+        # スクリプト実行フォルダ、ログフォルダ、スクリプトフォルダを設定
+        $this.pc.SetScriptFolder($scriptFolderPath)
+        $this.pc.SetLogFolder("$scriptFolderPath\Logs")
+        $this.pc.SetScriptFolder($scriptFolderPath)
 
-function ProcessDocument {
-    param (
-        [PC]$pc,
-        [string]$filePath
-    )
+        # IniFileクラスのインスタンスを作成
+        $this.ini = [IniFile]::new($iniFilePath)
 
-    if (-not (Test-Path $filePath)) {
-        Write-Error "ファイルパスが無効です: $filePath"
-        return
+        # PC情報を調べて、iniファイルに記録
+        $this.RecordPCInfo()
+
+        # ドキュメントのパスを取得
+        $this.filePath = $this.ini.GetValue("Settings", "FilePath")
+
+        # ドキュメントを処理
+        $this.ProcessDocument()
     }
 
-    # スクリプト実行前に存在していたWordプロセスを取得
-    $existingWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
-
-    # Wordアプリケーションを起動
-    Write-Host "Wordアプリケーションを起動中..."
-    $word = [Word]::new($filePath, $pc)
-
-    try {
-        # 文書プロパティを表示
-        Write-Host "現在の文書プロパティ:"
-        foreach ($property in $word.DocumentProperties) {
-            Write-Host "$($property.Key): $($property.Value)"
+    [void]RecordPCInfo() {
+        $pcInfo = @{
+            "OS" = (Get-WmiObject -Class Win32_OperatingSystem).Caption
+            "UserName" = $env:USERNAME
+            "MachineName" = $env:COMPUTERNAME
         }
 
-        # 承認者プロパティを設定
-        # Write-Host "承認者プロパティを設定中..."
-        # $wordInstanceData.SetCustomProperty("Approver", $approver)
-
-        # 承認フラグプロパティを設定
-        # Write-Host "承認フラグプロパティを設定中..."
-        # $wordInstanceData.SetCustomProperty("ApprovalFlag", ($approvalFlag ? "承認" : "未承認"))
-
-        # カスタムプロパティの追加例
-        $word.AddCustomProperty("NewCustomProperty", "NewValue")
-
-        # カスタムプロパティの削除例
-        $word.RemoveCustomProperty("OldCustomProperty")
-
-        # テーブルセル情報の記録
-        $word.RecordTableCellInfo()
-
-        # 変更後の文書プロパティを表示
-        Write-Host "変更後の文書プロパティ:"
-        foreach ($property in $word.DocumentProperties) {
-            Write-Host "$($property.Key): $($property.Value)"
+        foreach ($key in $pcInfo.Keys) {
+            $this.ini.SetValue("PCInfo", $key, $pcInfo[$key])
         }
-    } finally {
-        # Wordアプリケーションを閉じる
-        $word.Close()
+    }
 
-        # スクリプト実行後に新たに起動されたWordプロセスを終了
-        $newWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
-        foreach ($process in $newWordProcesses) {
-            if ($existingWordProcesses -notcontains $process) {
-                Stop-Process -Id $process.Id -Force
+    [void]ProcessDocument() {
+        if (-not (Test-Path $this.filePath)) {
+            Write-Error "ファイルパスが無効です: $this.filePath"
+            return
+        }
+
+        # スクリプト実行前に存在していたWordプロセスを取得
+        $existingWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
+
+        # Wordアプリケーションを起動
+        Write-Host "Wordアプリケーションを起動中..."
+        $word = [Word]::new($this.filePath, $this.pc)
+
+        try {
+            # 文書プロパティを表示
+            Write-Host "現在の文書プロパティ:"
+            foreach ($property in $word.DocumentProperties) {
+                Write-Host "$($property.Key): $($property.Value)"
             }
+
+            # カスタムプロパティの追加例
+            $word.AddCustomProperty("NewCustomProperty", "NewValue")
+
+            # カスタムプロパティの削除例
+            $word.RemoveCustomProperty("OldCustomProperty")
+
+            # テーブルセル情報の記録
+            $word.RecordTableCellInfo()
+
+            # 変更後の文書プロパティを表示
+            Write-Host "変更後の文書プロパティ:"
+            foreach ($property in $word.DocumentProperties) {
+                Write-Host "$($property.Key): $($property.Value)"
+            }
+        } finally {
+            # Wordアプリケーションを閉じる
+            $word.Close()
+
+            # スクリプト実行後に新たに起動されたWordプロセスを終了
+            $newWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
+            foreach ($process in $newWordProcesses) {
+                if ($existingWordProcesses -notcontains $process) {
+                    Stop-Process -Id $process.Id -Force
+                }
+            }
+
+            # PCインスタンスへ通知してインスタンスの管理を終了
+            $this.pc.NotifyInstanceClosed($word)
         }
     }
 }
-
-# IniFileクラスのインスタンスを作成
-$ini = [IniFile]::new($iniFilePath)
 
 # PCクラスのインスタンスを作成
-$pc = New-Object -TypeName PSObject -Property @{
-    IsLibraryConfigured = $true
-}
+$pc = [PC]::new()
 
-# ドキュメントのパスを取得
-$filePath = $ini.GetValue("Settings", "FilePath")
+# 各クラスのパスを取得して読み込む
+$iniClassPath = $pc.GetScriptPath("Ini_Class.ps1")
+$pcClassPath = $pc.GetScriptPath("PC_Class.ps1")
+$wordClassPath = $pc.GetScriptPath("Word_Class.ps1")
 
-# ドキュメントを処理
-ProcessDocument -pc $pc -filePath $filePath
+# IniFileクラスを読み込む
+. $iniClassPath
+
+# PCクラスを読み込む
+. $pcClassPath
+
+# Wordクラスを読み込む
+. $wordClassPath
+
+# メインクラスのインスタンスを作成して実行
+$main = [Main]::new()

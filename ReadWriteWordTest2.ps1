@@ -1,3 +1,14 @@
+# デフォルト値を変数として定義
+$defaultFilePath = "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\技100-999.docx"
+$defaultPropertyName = "Author"
+$defaultPropertyValue = "近藤さん"
+
+# パラメータの定義
+$filePath = $defaultFilePath
+$propertyName = $defaultPropertyName
+$propertyValue = $defaultPropertyValue
+$isNewCustomProperty = $false
+
 # 書き込み例
 function Write-DocumentProperty {
     param (
@@ -26,7 +37,6 @@ function Write-DocumentProperty {
     # ドキュメントを閉じる
     $word.Close()
 }
-
 
 # 読み込み例
 function Read-DocumentProperties {
@@ -58,18 +68,6 @@ function Read-DocumentProperties {
     # ドキュメントを閉じる
     $word.Close()
 }
-
-
-
-# デフォルト値を変数として定義
-$defaultFilePath = "C:\Users\y0927\Documents\GitHub\PS_Script\技100-999.docx"
-$defaultPropertyName = "Author"
-$defaultPropertyValue = "近藤さんA"
-
-[string]$filePath = $defaultFilePath
-[string]$propertyName = $defaultPropertyName
-[string]$propertyValue = $defaultPropertyValue
-[switch]$isNewCustomProperty
 
 # Word_Class.ps1を読み込む
 . "C:\Users\y0927\Documents\GitHub\PS_Script\MyLibrary\Word_Class.ps1"

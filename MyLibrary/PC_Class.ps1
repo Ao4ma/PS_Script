@@ -5,6 +5,9 @@ class PC {
     [string]$IniFilePath
     [hashtable]$IniContent
     [bool]$IsLibraryConfigured
+    [string]$ScriptFolder
+    [string]$LogFolder
+    [System.Collections.ArrayList]$ManagedInstances
 
     PC([string]$name, [string]$iniFilePath) {
         $this.Name = $name
@@ -13,6 +16,7 @@ class PC {
         $this.MACAddress = $this.GetMACAddress()
         $this.IniContent = $this.GetIniContent()
         $this.IsLibraryConfigured = $this.CheckLibraryConfiguration()
+        $this.ManagedInstances = [System.Collections.ArrayList]::new()
     }
 
     [void]DisplayInfo() {
@@ -31,81 +35,52 @@ class PC {
         return $macConfig.MacAddress
     }
 
-    [string]GetScriptDirectory() {
-        return Split-Path -Parent -Path $PSCommandPath
-    }
-
-    [void]ChangeToScriptDirectory() {
-        $scriptDir = $this.GetScriptDirectory()
-        Set-Location -Path $scriptDir
-        Write-Host "Changed directory to script location: $scriptDir"
-    }
-
     [hashtable]GetIniContent() {
-        $this.IniContent = @{}
-        if (Test-Path $this.IniFilePath) {
-            $lines = Get-Content -Path $this.IniFilePath
-            foreach ($line in $lines) {
-                if ($line -match "^(.*)=(.*)$") {
-                    $this.iniContent[$matches[1].Trim()] = $matches[2].Trim()
-                }
+        $iniContent = @{}
+        $currentSection = ""
+
+        foreach ($line in Get-Content -Path $this.IniFilePath) {
+            if ($line -match "^\[(.+)\]$") {
+                $currentSection = $matches[1]
+                $iniContent[$currentSection] = @{}
+            } elseif ($line -match "^(.+?)=(.*)$") {
+                $key = $matches[1].Trim()
+                $value = $matches[2].Trim()
+                $iniContent[$currentSection][$key] = $value
             }
         }
-        return $this.iniContent
+
+        return $iniContent
     }
 
-    [void]SavePCInfoToIni() {
-        $this.iniContent = $this.GetIniContent()
-        $this.iniContent[$this.Name] = "$($this.IPAddress),$($this.MACAddress),$($this.GetScriptDirectory())"
-        $iniLines = @()
-        foreach ($key in $this.iniContent.Keys) {
-            $iniLines += "`"$key`",`"$($this.iniContent[$key])`""
-        }
-        Set-Content -Path $this.IniFilePath -Value $iniLines
+    [bool]CheckLibraryConfiguration() {
+        # ライブラリの設定を確認するロジックをここに追加
+        return $true
     }
 
-    [void]LoadPCInfoFromIni() {
-        $this.iniContent = $this.GetIniContent()
-        if ($this.iniContent.ContainsKey($this.Name)) {
-            $info = $this.iniContent[$this.Name] -split ","
-            $this.IPAddress = $info[0]
-            $this.MACAddress = $info[1]
-            $scriptDir = $info[2]
-            Set-Location -Path $scriptDir
-            Write-Host "Loaded PC info from INI file: $($this.Name), $($this.IPAddress), $($this.MACAddress), $scriptDir"
-        } else {
-            Write-Host "PC info not found in INI file for: $($this.Name)"
-        }
+    [void]SetScriptFolder([string]$path) {
+        $this.ScriptFolder = $path
     }
 
- [bool] CheckLibraryConfiguration() {
-    Write-host "Entering CheckLibraryConfiguration method"
-    
-    # デバッグ情報: IniContentの内容を表示
-    Write-host "IniContent:"
-    $this.IniContent.GetEnumerator() | ForEach-Object { Write-host "$($_.Key) = $($_.Value)" }
-    
-    try {
-        Write-host "Entering try block"
-        if ($this.IniContent.ContainsKey("LibraryName") -and $this.IniContent.ContainsKey("LibraryPath")) {
-            Write-host "LibraryName and LibraryPath found in IniContent"
-            $libraryPath = $this.IniContent["LibraryPath"]
-            Write-host "LibraryPath: $libraryPath"
-            if (Test-Path $libraryPath) {
-                Write-host "LibraryPath exists"
-                Add-Type -Path $libraryPath
-                Write-host "Imported Interop Assembly from $libraryPath"
-                return $true
-            } else {
-                Write-Warning "Interop Assembly path is invalid or not found: $libraryPath"
-                return $false
-            }
-        } else {
-            Write-host "LibraryName or LibraryPath not found in IniContent"
-        }
-    } catch {
-        Write-Error "Error in CheckLibraryConfiguration: $_"
+    [void]SetLogFolder([string]$path) {
+        $this.LogFolder = $path
     }
-    return $false
-}
+
+    [void]AddInstance([object]$instance) {
+        $this.ManagedInstances.Add($instance) | Out-Null
+    }
+
+    [void]RemoveInstance([object]$instance) {
+        $this.ManagedInstances.Remove($instance) | Out-Null
+    }
+
+    [void]NotifyInstanceClosed([object]$instance) {
+        Write-Host "インスタンスが閉じられました: $instance"
+        $this.RemoveInstance($instance)
+    }
+
+    [string]GetScriptPath([string]$libraryName) {
+        $userProfile = [System.Environment]::GetFolderPath("UserProfile")
+        return Join-Path -Path $userProfile -ChildPath "Documents\GitHub\PS_Script\MyLibrary\$libraryName"
+    }
 }
