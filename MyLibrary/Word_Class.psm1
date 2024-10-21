@@ -1,5 +1,6 @@
-using module 'C:\Users\y0927\Documents\GitHub\PS_Script\MyLibrary\PC_Class.psm1'
-using module 'C:\Users\y0927\Documents\GitHub\PS_Script\MyLibrary\Ini_Class.psm1'
+# PC_Class.psm1 モジュールをインポート
+using module ./PC_Class.psm1
+
 class Word {
     [string]$FilePath
     [PC]$PC

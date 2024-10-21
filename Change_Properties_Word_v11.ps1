@@ -1,16 +1,10 @@
 # モジュールをインポート
-using module 'C:\Users\y0927\Documents\GitHub\PS_Script\MyLibrary\PC_Class.psm1'
-using module 'C:\Users\y0927\Documents\GitHub\PS_Script\MyLibrary\Ini_Class.psm1'
-using module 'C:\Users\y0927\Documents\GitHub\PS_Script\MyLibrary\Word_Class.psm1'
+using module ./MyLibrary/PC_Class.psm1
+using module ./MyLibrary/Ini_Class.psm1
+using module ./MyLibrary/Word_Class.psm1
 
 # スクリプトのフォルダパスを取得
 $scriptFolderPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$myLibraryPath = Join-Path -Path $scriptFolderPath -ChildPath "MyLibrary"
-
-# モジュールのパスを設定
-# $pcClassPath = Join-Path -Path $myLibraryPath -ChildPath "PC_Class.psm1"
-# $iniClassPath = Join-Path -Path $myLibraryPath -ChildPath "Ini_Class.psm1"
-# $wordClassPath = Join-Path -Path $myLibraryPath -ChildPath "Word_Class.psm1"
 
 # スクリプトのフォルダパスを取得
 $iniFilePath = Join-Path -Path $scriptFolderPath -ChildPath "config_Change_Properties_Word.ini"
@@ -103,6 +97,6 @@ class Main {
     }
 }
 
-# メインクラスのインスタンスを作成して実行
+# モジュールをインポートした後にクラスを使用する
 $main = [Main]::new($scriptFolderPath, $iniFilePath)
 $main.Run()

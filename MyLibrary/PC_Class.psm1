@@ -1,5 +1,3 @@
-using module 'C:\Users\y0927\Documents\GitHub\PS_Script\MyLibrary\Ini_Class.psm1'
-using module 'C:\Users\y0927\Documents\GitHub\PS_Script\MyLibrary\Word_Class.psm1'
 class PC {
     [string]$Name
     [string]$ScriptFolder
