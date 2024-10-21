@@ -1,3 +1,8 @@
+# モジュールのインポート
+Import-Module ./MyLibrary/PC_Class.psm1
+Import-Module ./MyLibrary/Word_Class.psm1
+Import-Module ./MyLibrary/Ini_Class.psm1
+
 # スクリプトのフォルダパスを取得
 $scriptFolderPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $iniFilePath = Join-Path -Path $scriptFolderPath -ChildPath "config_Change_Properties_Word.ini"
@@ -9,12 +14,11 @@ class Main {
 
     Main() {
         # PCクラスのインスタンスを作成
-        $this.pc = [PC]::new()
+        $this.pc = [PC]::new("MyPC", $iniFilePath)
 
         # スクリプト実行フォルダ、ログフォルダ、スクリプトフォルダを設定
         $this.pc.SetScriptFolder($scriptFolderPath)
         $this.pc.SetLogFolder("$scriptFolderPath\Logs")
-        $this.pc.SetScriptFolder($scriptFolderPath)
 
         # IniFileクラスのインスタンスを作成
         $this.ini = [IniFile]::new($iniFilePath)
@@ -52,7 +56,7 @@ class Main {
 
         # Wordアプリケーションを起動
         Write-Host "Wordアプリケーションを起動中..."
-        $word = [Word]::new($this.filePath, $this.pc)
+        $word = [Word]::new($this.filePath, $this.pc, $iniFilePath)
 
         try {
             # 文書プロパティを表示
@@ -92,23 +96,6 @@ class Main {
         }
     }
 }
-
-# PCクラスのインスタンスを作成
-$pc = [PC]::new()
-
-# 各クラスのパスを取得して読み込む
-$iniClassPath = $pc.GetScriptPath("Ini_Class.ps1")
-$pcClassPath = $pc.GetScriptPath("PC_Class.ps1")
-$wordClassPath = $pc.GetScriptPath("Word_Class.ps1")
-
-# IniFileクラスを読み込む
-. $iniClassPath
-
-# PCクラスを読み込む
-. $pcClassPath
-
-# Wordクラスを読み込む
-. $wordClassPath
 
 # メインクラスのインスタンスを作成して実行
 $main = [Main]::new()
