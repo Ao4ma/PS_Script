@@ -5,12 +5,13 @@ Import-Module ./MyLibrary/Ini_Class.psm1
 
 # スクリプトのフォルダパスを取得
 $scriptFolderPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
+
+# スクリプトのフォルダパスを取得
 $iniFilePath = Join-Path -Path $scriptFolderPath -ChildPath "config_Change_Properties_Word.ini"
 
 class Main {
-    [PC]$pc
-    [IniFile]$ini
-    [string]$filePath
+    [string]$scriptFolderPath
+    [string]$iniFilePath
 
     Main() {
         # PCクラスのインスタンスを作成
@@ -33,7 +34,33 @@ class Main {
         $this.ProcessDocument()
     }
 
-    [void]RecordPCInfo() {
+    [void]Run() {
+        # PCクラスのインスタンスを作成
+        $pc = [PC]::new((hostname))
+        $pc.SetScriptFolder($this.scriptFolderPath)
+        $pc.SetLogFolder("$this.scriptFolderPath\Logs")
+
+        # PC情報を表示
+        $pc.DisplayInfo()
+        Write-Host "IP Address: $($pc.GetIPAddress())"
+        Write-Host "MAC Address: $($pc.GetMACAddress())"
+        Write-Host "Installed Libraries:"
+        $pc.ListInstalledLibraries()
+
+        # IniFileクラスのインスタンスを作成
+        $ini = [IniFile]::new($this.iniFilePath)
+
+        # PC情報を調べて、iniファイルに記録
+        $this.RecordPCInfo($pc, $ini)
+
+        # ドキュメントのパスを取得
+        $filePath = $ini.GetValue("Settings", "FilePath")
+
+        # ドキュメントを処理
+        $this.ProcessDocument($pc, $filePath)
+    }
+
+    [void]RecordPCInfo([PC]$pc, [IniFile]$ini) {
         $pcInfo = @{
             "OS" = (Get-WmiObject -Class Win32_OperatingSystem).Caption
             "UserName" = $env:USERNAME
@@ -41,13 +68,13 @@ class Main {
         }
 
         foreach ($key in $pcInfo.Keys) {
-            $this.ini.SetValue("PCInfo", $key, $pcInfo[$key])
+            $ini.SetValue("PCInfo", $key, $pcInfo[$key])
         }
     }
 
-    [void]ProcessDocument() {
-        if (-not (Test-Path $this.filePath)) {
-            Write-Error "ファイルパスが無効です: $this.filePath"
+    [void]ProcessDocument([PC]$pc, [string]$filePath) {
+        if (-not (Test-Path $filePath)) {
+            Write-Error "ファイルパスが無効です: $filePath"
             return
         }
 
@@ -82,17 +109,6 @@ class Main {
         } finally {
             # Wordアプリケーションを閉じる
             $word.Close()
-
-            # スクリプト実行後に新たに起動されたWordプロセスを終了
-            $newWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
-            foreach ($process in $newWordProcesses) {
-                if ($existingWordProcesses -notcontains $process) {
-                    Stop-Process -Id $process.Id -Force
-                }
-            }
-
-            # PCインスタンスへ通知してインスタンスの管理を終了
-            $this.pc.NotifyInstanceClosed($word)
         }
     }
 }
