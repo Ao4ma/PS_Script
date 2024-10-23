@@ -1,5 +1,6 @@
 # モジュールのインポート
-import-module ./PC_Class.psm1
+using module ./PC_Class.psm1
+using module ./Ini_Class.psm1
 
 class Word {
     [object]$Application
@@ -214,126 +215,54 @@ class Word {
             Write-Host "An error occurred while recording table cell info: $_" -ForegroundColor Red
         }
     }
-}
 
-function Set-Property {
-    param (
-        [object]$Properties,
-        [string]$propertyName,
-        [string]$newValue,
-        [string]$binding
-    )
-
-    try {
-        $pn = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $Properties, $propertyName)
-        [System.__ComObject].InvokeMember("Value", $binding::SetProperty, $null, $pn, $newValue)
-        return $true
-    } catch [System.Exception] {
-        Write-Host -ForegroundColor Blue "Property '$propertyName' not found or cannot be set."
-        return $false
-    }
-}
-
-function Get-Property {
-    param (
-        [object]$Properties,
-        [string]$propertyName,
-        [string]$binding
-    )
-
-    try {
-        $pn = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $Properties, $propertyName)
-        $value = [System.__ComObject].InvokeMember("Value", $binding::GetProperty, $null, $pn, $null)
-        return $value
-    } catch [System.Exception] {
-        Write-Host -ForegroundColor Blue "Property '$propertyName' not found."
-        return $null
-    }
-}
-
-function Get-Properties {
-    param (
-        [object]$Properties,
-        [array]$PropertyNames,
-        [hashtable]$objHash,
-        [string]$binding
-    )
-
-    foreach ($p in $PropertyNames) {
+    [Boolean]SetProperty([object]$Properties, [string]$propertyName, [string]$newValue, [string]$binding) {
         try {
-            $pn = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $Properties, $p)
-            $value = [System.__ComObject].InvokeMember("Value", $binding::GetProperty, $null, $pn, $null)
-            $objHash[$p] = $value
+            $pn = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $Properties, $propertyName)
+            [System.__ComObject].InvokeMember("Value", $binding::SetProperty, $null, $pn, $newValue)
+            return $true
         } catch [System.Exception] {
-            Write-Host -ForegroundColor Blue "Value not found for $p"
+            Write-Host -ForegroundColor Blue "Property '$propertyName' not found or cannot be set."
+            return $false
         }
-    }
-}
+    }   
 
-function Get-IniContent {
-    param (
-        [string]$Path
-    )
-
-    $iniContent = @{}
-    $currentSection = ""
-
-    foreach ($line in Get-Content -Path $Path) {
-        if ($line -match "^\[(.+)\]$") {
-            $currentSection = $matches[1]
-            $iniContent[$currentSection] = @{}
-        } elseif ($line -match "^(.+?)=(.*)$") {
-            $key = $matches[1].Trim()
-            $value = $matches[2].Trim()
-            $iniContent[$currentSection][$key] = $value
+    [string]GetProperty([object]$Properties, [string]$propertyName, [string]$binding) {
+        try {
+            $pn = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $Properties, $propertyName)
+            $value = [System.__ComObject].InvokeMember("Value", $binding::GetProperty, $null, $pn, $null)
+            return $value
+        } catch [System.Exception] {
+            Write-Host -ForegroundColor Blue "Property '$propertyName' not found."
+            return $null
         }
     }
 
-    return $iniContent
-=======
-# PC_Class.psm1 モジュールをインポート
-import-module ./PC_Class.psm1
-
-class Word {
-    [string]$FilePath
-    [PC]$PC
-    [hashtable]$DocumentProperties
-
-    Word([string]$filePath, [PC]$pc) {
-        $this.FilePath = $filePath
-        $this.PC = $pc
-        $this.DocumentProperties = @{}
-
-        # Wordアプリケーションを起動
-        $wordApp = New-Object -ComObject Word.Application
-        $wordApp.Visible = $false
-        $this.WordApp = $wordApp
-
-        # ドキュメントを開く
-        $document = $wordApp.Documents.Open($filePath)
-        $this.Document = $document
-
-        # 文書プロパティを取得
-        foreach ($property in $document.BuiltInDocumentProperties) {
-            $this.DocumentProperties[$property.Name] = $property.Value
+    [void]GetProperties([object]$Properties, [array]$PropertyNames, [hashtable]$objHash, [string]$binding) {
+        foreach ($p in $PropertyNames) {
+            try {
+                $pn = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $Properties, $p)
+                $value = [System.__ComObject].InvokeMember("Value", $binding::GetProperty, $null, $pn, $null)
+                $objHash[$p] = $value
+            } catch [System.Exception] {
+                Write-Host -ForegroundColor Blue "Value not found for $p"
+            }
         }
     }
 
-    [void] AddCustomProperty([string]$name, [string]$value) {
-        $this.Document.CustomDocumentProperties.Add($name, $false, 4, $value)
+    [String] GetIniContent ([string]$Path) {
+        $iniContent = @{}
+        $currentSection = ""
+        foreach ($line in Get-Content -Path $Path) {
+            if ($line -match "^\[(.+)\]$") {
+                $currentSection = $matches[1]
+                $iniContent[$currentSection] = @{}
+            } elseif ($line -match "^(.+?)=(.*)$") {
+                $key = $matches[1].Trim()
+                $value = $matches[2].Trim()
+                $iniContent[$currentSection][$key] = $value
+            }
+        }
+        return $iniContent
     }
-
-    [void] RemoveCustomProperty([string]$name) {
-        $this.Document.CustomDocumentProperties.Item($name).Delete()
-    }
-
-    [void] RecordTableCellInfo() {
-        # Implementation to record table cell info
-    }
-
-    [void] Close() {
-        $this.Document.Close($false)
-        $this.WordApp.Quit()
-    }
-
 }

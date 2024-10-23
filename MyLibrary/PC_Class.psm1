@@ -36,21 +36,21 @@ class MyPC {
     }
 
     [hashtable]GetIniContent() {
-        $iniContent = @{}
+        $this.IniContent = @{}
         $currentSection = ""
 
         foreach ($line in Get-Content -Path $this.IniFilePath) {
             if ($line -match "^\[(.+)\]$") {
                 $currentSection = $matches[1]
-                $iniContent[$currentSection] = @{}
+                $this.IniContent[$currentSection] = @{}
             } elseif ($line -match "^(.+?)=(.*)$") {
                 $key = $matches[1].Trim()
                 $value = $matches[2].Trim()
-                $iniContent[$currentSection][$key] = $value
+                $this.IniContent[$currentSection][$key] = $value
             }
         }
 
-        return $iniContent
+        return $this.IniContent
     }
 
     [bool]CheckLibraryConfiguration() {
