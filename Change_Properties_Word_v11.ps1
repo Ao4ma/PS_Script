@@ -20,7 +20,7 @@ class Main {
 
     [void]Run() {
         # MyPCクラスのインスタンスを作成
-        $pc = [MyPC]::new((hostname))
+        $pc = [MyPC]::new((hostname), $this.iniFilePath)
         $pc.SetScriptFolder($this.scriptFolderPath)
         $pc.SetLogFolder("$this.scriptFolderPath\Logs")
 

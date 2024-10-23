@@ -54,9 +54,34 @@ class MyPC {
     }
 
     [bool]CheckLibraryConfiguration() {
-        # ライブラリの設定を確認するロジックをここに追加
+        Write-host "Entering CheckLibraryConfiguration method"
+        Write-host "IniContent:"
+        $this.IniContent.GetEnumerator() | ForEach-Object { Write-host "$($_.Key) = $($_.Value)" }
+        
+        try {
+            Write-host "Entering try block"
+            if ($this.IniContent.ContainsKey("LibraryName") -and $this.IniContent.ContainsKey("LibraryPath")) {
+                Write-host "LibraryName and LibraryPath found in IniContent"
+                $libraryPath = $this.IniContent["LibraryPath"]
+                Write-host "LibraryPath: $libraryPath"
+                if (Test-Path $libraryPath) {
+                    Write-host "LibraryPath exists"
+                    Add-Type -Path $libraryPath
+                    Write-host "Imported Interop Assembly from $libraryPath"
+                    return $true
+                } else {
+                    Write-Warning "Interop Assembly path is invalid or not found: $libraryPath"
+                    return $false
+                }
+            } else {
+                Write-host "LibraryName or LibraryPath not found in IniContent"
+            }
+        } catch {
+            Write-Error "Error in CheckLibraryConfiguration: $_"
+        }
         return $true
     }
+
 
     [void]SetScriptFolder([string]$path) {
         $this.ScriptFolder = $path
@@ -82,5 +107,12 @@ class MyPC {
     [string]GetScriptPath([string]$libraryName) {
         $userProfile = [System.Environment]::GetFolderPath("UserProfile")
         return Join-Path -Path $userProfile -ChildPath "Documents\GitHub\PS_Script\MyLibrary\$libraryName"
+    }
+
+    [void] ListInstalledLibraries() {
+        $libraries = Get-InstalledModule
+        foreach ($library in $libraries) {
+            Write-Host "$($library.Name) - $($library.Version)"
+        }
     }
 }
