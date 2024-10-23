@@ -1,4 +1,4 @@
-class PC {
+class MyPC {
     [string]$Name
     [string]$IPAddress
     [string]$MACAddress
@@ -9,7 +9,7 @@ class PC {
     [string]$LogFolder
     [System.Collections.ArrayList]$ManagedInstances
 
-    PC([string]$name, [string]$iniFilePath) {
+    MyPC([string]$name, [string]$iniFilePath) {
         $this.Name = $name
         $this.IniFilePath = $iniFilePath
         $this.IPAddress = $this.GetIPAddress()

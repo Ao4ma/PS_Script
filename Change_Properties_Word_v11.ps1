@@ -1,7 +1,7 @@
-# モジュールのインポート
-Import-Module ./MyLibrary/PC_Class.psm1
-Import-Module ./MyLibrary/Word_Class.psm1
-Import-Module ./MyLibrary/Ini_Class.psm1
+# モジュールをインポート
+using module ./MyLibrary/PC_Class.psm1
+using module ./MyLibrary/Ini_Class.psm1
+using module ./MyLibrary/Word_Class.psm1
 
 # スクリプトのフォルダパスを取得
 $scriptFolderPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
@@ -13,30 +13,14 @@ class Main {
     [string]$scriptFolderPath
     [string]$iniFilePath
 
-    Main() {
-        # PCクラスのインスタンスを作成
-        $this.pc = [PC]::new("MyPC", $iniFilePath)
-
-        # スクリプト実行フォルダ、ログフォルダ、スクリプトフォルダを設定
-        $this.pc.SetScriptFolder($scriptFolderPath)
-        $this.pc.SetLogFolder("$scriptFolderPath\Logs")
-
-        # IniFileクラスのインスタンスを作成
-        $this.ini = [IniFile]::new($iniFilePath)
-
-        # PC情報を調べて、iniファイルに記録
-        $this.RecordPCInfo()
-
-        # ドキュメントのパスを取得
-        $this.filePath = $this.ini.GetValue("Settings", "FilePath")
-
-        # ドキュメントを処理
-        $this.ProcessDocument()
+    Main([string]$scriptFolderPath, [string]$iniFilePath) {
+        $this.scriptFolderPath = $scriptFolderPath
+        $this.iniFilePath = $iniFilePath
     }
 
     [void]Run() {
-        # PCクラスのインスタンスを作成
-        $pc = [PC]::new((hostname))
+        # MyPCクラスのインスタンスを作成
+        $pc = [MyPC]::new((hostname))
         $pc.SetScriptFolder($this.scriptFolderPath)
         $pc.SetLogFolder("$this.scriptFolderPath\Logs")
 
@@ -54,13 +38,15 @@ class Main {
         $this.RecordPCInfo($pc, $ini)
 
         # ドキュメントのパスを取得
-        $filePath = $ini.GetValue("Settings", "FilePath")
+        $docFilePath = $ini.GetValue("DocFile", "DocFilePath")
+        $docFileName = $ini.GetValue("DocFile", "DocFileName")
+        $filePath = Join-Path -Path $docFilePath -ChildPath $docFileName
 
         # ドキュメントを処理
         $this.ProcessDocument($pc, $filePath)
     }
 
-    [void]RecordPCInfo([PC]$pc, [IniFile]$ini) {
+    [void]RecordPCInfo([MyPC]$pc, [IniFile]$ini) {
         $pcInfo = @{
             "OS" = (Get-WmiObject -Class Win32_OperatingSystem).Caption
             "UserName" = $env:USERNAME
@@ -72,7 +58,7 @@ class Main {
         }
     }
 
-    [void]ProcessDocument([PC]$pc, [string]$filePath) {
+    [void]ProcessDocument([MyPC]$pc, [string]$filePath) {
         if (-not (Test-Path $filePath)) {
             Write-Error "ファイルパスが無効です: $filePath"
             return
@@ -83,7 +69,7 @@ class Main {
 
         # Wordアプリケーションを起動
         Write-Host "Wordアプリケーションを起動中..."
-        $word = [Word]::new($this.filePath, $this.pc, $iniFilePath)
+        $word = [Word]::new($filePath, $pc)
 
         try {
             # 文書プロパティを表示
@@ -113,5 +99,6 @@ class Main {
     }
 }
 
-# メインクラスのインスタンスを作成して実行
-$main = [Main]::new()
+# モジュールをインポートした後にクラスを使用する
+$main = [Main]::new($scriptFolderPath, $iniFilePath)
+$main.Run()
