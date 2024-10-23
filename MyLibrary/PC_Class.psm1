@@ -35,7 +35,7 @@ class MyPC {
         return $macConfig.MacAddress
     }
 
-    [System.Collections.Generic.List[hashtable]]LoadIniFile() {
+    [System.Collections.Generic.List[hashtable]]GetIniContent() {
         $this.iniContent = [System.Collections.Generic.List[hashtable]]::new()
         $this.currentSection = $null
         $this.currentHashTable = $null
@@ -46,8 +46,7 @@ class MyPC {
                     $this.iniContent.Add($this.currentHashTable)
                 }
                 $this.currentSection = $matches[1]
-                $this.currentHashTable = @{}
-                $this.currentHashTable["Section"] = $this.currentSection
+                $this.currentHashTable = @{ "Section" = $this.currentSection }
             } elseif ($line -match "^(.+?)=(.*)$") {
                 $key = $matches[1].Trim()
                 $value = $matches[2].Trim()
@@ -119,7 +118,6 @@ class MyPC {
         $userProfile = [System.Environment]::GetFolderPath("UserProfile")
         return Join-Path -Path $userProfile -ChildPath "Documents\GitHub\PS_Script\MyLibrary\$libraryName"
     }
-
     [void] ListInstalledLibraries() {
         $libraries = Get-InstalledModule
         foreach ($library in $libraries) {
