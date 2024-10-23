@@ -3,7 +3,7 @@ class MyPC {
     [string]$IPAddress
     [string]$MACAddress
     [string]$IniFilePath
-    [hashtable]$IniContent
+    [System.Collections.Generic.List[hashtable]]$IniContent
     [bool]$IsLibraryConfigured
     [string]$ScriptFolder
     [string]$LogFolder
@@ -93,7 +93,6 @@ class MyPC {
         }
         return $true
     }
-
 
     [void]SetScriptFolder([string]$path) {
         $this.ScriptFolder = $path
