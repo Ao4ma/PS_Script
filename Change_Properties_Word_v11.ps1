@@ -95,6 +95,16 @@ class Main {
         } finally {
             # Wordアプリケーションを閉じる
             $word.Close()
+                        # スクリプト実行後に新たに起動されたWordプロセスを終了
+                        $newWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
+                        foreach ($process in $newWordProcesses) {
+                            if ($existingWordProcesses -notcontains $process) {
+                                Stop-Process -Id $process.Id -Force
+                            }
+                        }
+            
+                        # MyPCインスタンスへ通知してインスタンスの管理を終了
+                        $pc.NotifyInstanceClosed($word)
         }
     }
 }

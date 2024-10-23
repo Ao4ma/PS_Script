@@ -25,6 +25,32 @@ class IniFile {
         return $iniContent
     }
 
+    [System.Collections.Generic.List[hashtable]]GetIniContentAsList() {
+        $iniContent = [System.Collections.Generic.List[hashtable]]::new()
+        $currentSection = $null
+        $currentHashTable = $null
+
+        foreach ($line in Get-Content -Path $this.FilePath) {
+            if ($line -match "^\[(.+)\]$") {
+                if ($null -ne $currentSection) {
+                    $iniContent.Add($currentHashTable)
+                }
+                $currentSection = $matches[1]
+                $currentHashTable = @{ "Section" = $currentSection }
+            } elseif ($line -match "^(.+?)=(.*)$") {
+                $key = $matches[1].Trim()
+                $value = $matches[2].Trim()
+                $currentHashTable[$key] = [System.Web.HttpUtility]::HtmlEncode($value)
+            }
+        }
+
+        if ($null -ne $currentSection) {
+            $iniContent.Add($currentHashTable)
+        }
+
+        return $iniContent
+    }
+
     [string]GetValue([string]$section, [string]$key) {
         if ($this.Content.ContainsKey($section) -and $this.Content[$section].ContainsKey($key)) {
             return $this.Content[$section][$key]
@@ -61,5 +87,30 @@ class IniFile {
             $lines += ""
         }
         $lines | Set-Content -Path $this.FilePath
+    }
+
+
+
+    [void]SaveListToIniFile([System.Collections.Generic.List[hashtable]]$list) {
+        $lines = @{}
+        foreach ($section in $list) {
+            foreach ($key in $section.Keys) {
+                $sectionName = $key -match "^\[(.+)\]$" ? $matches[1] : $null
+                if ($sectionName) {
+                    if (-not $lines.ContainsKey($sectionName)) {
+                        $lines[$sectionName] = @()
+                    }
+                    $lines[$sectionName] += "$key=$($section[$key])"
+                }
+            }
+        }
+
+        $output = @()
+        foreach ($sectionName in $lines.Keys) {
+            $output += "[$sectionName]"
+            $output += $lines[$sectionName]
+            $output += ""
+        }
+        $output | Set-Content -Path $this.FilePath
     }
 }

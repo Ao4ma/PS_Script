@@ -36,29 +36,8 @@ class MyPC {
     }
 
     [System.Collections.Generic.List[hashtable]]GetIniContent() {
-        $this.iniContent = [System.Collections.Generic.List[hashtable]]::new()
-        $this.currentSection = $null
-        $this.currentHashTable = $null
-
-        foreach ($line in Get-Content -Path $this.IniFilePath) {
-            if ($line -match "^\[(.+)\]$") {
-                if ($null -ne $this.currentSection) {
-                    $this.iniContent.Add($this.currentHashTable)
-                }
-                $this.currentSection = $matches[1]
-                $this.currentHashTable = @{ "Section" = $this.currentSection }
-            } elseif ($line -match "^(.+?)=(.*)$") {
-                $key = $matches[1].Trim()
-                $value = $matches[2].Trim()
-                $this.currentHashTable[$key] = $value
-            }
-        }
-
-        if ($null -ne $this.currentSection) {
-            $this.iniContent.Add($this.currentHashTable)
-        }
-
-        return $this.iniContent
+        $iniFile = [IniFile]::new($this.IniFilePath)
+        return $iniFile.GetIniContentAsList()
     }
 
     [bool]CheckLibraryConfiguration() {
@@ -118,7 +97,8 @@ class MyPC {
         $userProfile = [System.Environment]::GetFolderPath("UserProfile")
         return Join-Path -Path $userProfile -ChildPath "Documents\GitHub\PS_Script\MyLibrary\$libraryName"
     }
-    [void] ListInstalledLibraries() {
+
+    [void]ListInstalledLibraries() {
         $libraries = Get-InstalledModule
         foreach ($library in $libraries) {
             Write-Host "$($library.Name) - $($library.Version)"
