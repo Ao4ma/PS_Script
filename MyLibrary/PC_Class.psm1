@@ -57,11 +57,13 @@ class MyPC {
         Write-Host "IniContent:"
         
         $this.IniContent.GetEnumerator() | ForEach-Object {
-            Write-Host "$($_.Key) = $($_.Value)"
+            Write-Host "$($_.Key):"
             if ($_.Value -is [hashtable]) {
                 $_.Value.GetEnumerator() | ForEach-Object {
-                    Write-Host "  $($_.Key) = $($_.Value)"
+                    Write-Host "  [$($_.Key)] = '$($_.Value)'"
                 }
+            } else {
+                Write-Host "  [$($_.Key)] = '$($_.Value)'"
             }
         }
 
