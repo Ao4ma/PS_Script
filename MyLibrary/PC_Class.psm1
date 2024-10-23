@@ -1,3 +1,4 @@
+using module ./Ini_Class.psm1
 class MyPC {
     [string]$Name
     [string]$IPAddress
