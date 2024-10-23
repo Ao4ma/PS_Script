@@ -56,8 +56,16 @@ class MyPC {
     [bool]CheckLibraryConfiguration() {
         Write-host "Entering CheckLibraryConfiguration method"
         Write-host "IniContent:"
-        $this.IniContent.GetEnumerator() | ForEach-Object { Write-host "$($_.Key) = $($_.Value)" }
         
+        $this.IniContent.GetEnumerator() | ForEach-Object {
+            Write-Host "$($_.Key) = $($_.Value)"
+            if ($_.Value -is [hashtable]) {
+                $_.Value.GetEnumerator() | ForEach-Object {
+                    Write-Host "  $_.Key = $_.Value"
+                }
+            }
+        }
+
         try {
             Write-host "Entering try block"
             if ($this.IniContent.ContainsKey("LibraryName") -and $this.IniContent.ContainsKey("LibraryPath")) {
