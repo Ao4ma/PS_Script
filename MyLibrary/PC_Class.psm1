@@ -36,30 +36,30 @@ class MyPC {
     }
 
     [System.Collections.Generic.List[hashtable]]LoadIniFile() {
-        $iniContent = [System.Collections.Generic.List[hashtable]]::new()
-        $currentSection = $null
-        $currentHashTable = $null
+        $this.iniContent = [System.Collections.Generic.List[hashtable]]::new()
+        $this.currentSection = $null
+        $this.currentHashTable = $null
 
         foreach ($line in Get-Content -Path $this.IniFilePath) {
             if ($line -match "^\[(.+)\]$") {
-                if ($currentSection -ne $null) {
-                    $iniContent.Add($currentHashTable)
+                if ($null -ne $this.currentSection) {
+                    $this.iniContent.Add($this.currentHashTable)
                 }
-                $currentSection = $matches[1]
-                $currentHashTable = @{}
-                $currentHashTable["Section"] = $currentSection
+                $this.currentSection = $matches[1]
+                $this.currentHashTable = @{}
+                $this.currentHashTable["Section"] = $this.currentSection
             } elseif ($line -match "^(.+?)=(.*)$") {
                 $key = $matches[1].Trim()
                 $value = $matches[2].Trim()
-                $currentHashTable[$key] = $value
+                $this.currentHashTable[$key] = $value
             }
         }
 
-        if ($currentSection -ne $null) {
-            $iniContent.Add($currentHashTable)
+        if ($null -ne $this.currentSection) {
+            $this.iniContent.Add($this.currentHashTable)
         }
 
-        return $iniContent
+        return $this.iniContent
     }
 
     [bool]CheckLibraryConfiguration() {
