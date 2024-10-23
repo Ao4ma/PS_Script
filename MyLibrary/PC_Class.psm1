@@ -35,48 +35,57 @@ class MyPC {
         return $macConfig.MacAddress
     }
 
-    [hashtable]GetIniContent() {
-        $this.IniContent = @{}
-        $currentSection = ""
+    [System.Collections.Generic.List[hashtable]]LoadIniFile() {
+        $iniContent = [System.Collections.Generic.List[hashtable]]::new()
+        $currentSection = $null
+        $currentHashTable = $null
 
         foreach ($line in Get-Content -Path $this.IniFilePath) {
             if ($line -match "^\[(.+)\]$") {
+                if ($currentSection -ne $null) {
+                    $iniContent.Add($currentHashTable)
+                }
                 $currentSection = $matches[1]
-                $this.IniContent[$currentSection] = @{}
+                $currentHashTable = @{}
+                $currentHashTable["Section"] = $currentSection
             } elseif ($line -match "^(.+?)=(.*)$") {
                 $key = $matches[1].Trim()
                 $value = $matches[2].Trim()
-                $this.IniContent[$currentSection][$key] = $value
+                $currentHashTable[$key] = $value
             }
         }
 
-        return $this.IniContent
+        if ($currentSection -ne $null) {
+            $iniContent.Add($currentHashTable)
+        }
+
+        return $iniContent
     }
 
     [bool]CheckLibraryConfiguration() {
         Write-Host "IniContent:"
         
-        $this.IniContent.GetEnumerator() | ForEach-Object {
-            Write-Host "$($_.Key):"
-            if ($_.Value -is [hashtable]) {
-                $_.Value.GetEnumerator() | ForEach-Object {
-                    Write-Host "  [$($_.Key)] = '$($_.Value)'"
+        foreach ($section in $this.IniContent) {
+            Write-Host "[$($section["Section"])]"
+            foreach ($key in $section.Keys) {
+                if ($key -ne "Section") {
+                    Write-Host "  $key = $($section[$key])"
                 }
-            } else {
-                Write-Host "  [$($_.Key)] = '$($_.Value)'"
             }
         }
 
         try {
-            if ($this.IniContent.ContainsKey("LibraryPath")) {
-                $libraryPath = $this.IniContent["LibraryPath"]
-                if (Test-Path $libraryPath) {
-                    Add-Type -Path $libraryPath
-                    Write-Host "Imported Interop Assembly from $libraryPath"
-                    return $true
-                } else {
-                    Write-Warning "Interop Assembly path is invalid or not found: $libraryPath"
-                    return $false
+            foreach ($section in $this.IniContent) {
+                if ($section["Section"] -eq "LibraryPath") {
+                    $libraryPath = $section["LibraryPath"]
+                    if (Test-Path $libraryPath) {
+                        Add-Type -Path $libraryPath
+                        Write-Host "Imported Interop Assembly from $libraryPath"
+                        return $true
+                    } else {
+                        Write-Warning "Interop Assembly path is invalid or not found: $libraryPath"
+                        return $false
+                    }
                 }
             }
         } catch {
