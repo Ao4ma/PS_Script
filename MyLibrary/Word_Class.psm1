@@ -127,21 +127,36 @@ class Word {
         try {
             Write-Host "Start Standard Properties (ビルドインプロパティ):"
             $builtinProperties = $this.Document.BuiltInDocumentProperties
-
-            # 値を確認
-            Write-Host "Value of BuiltInDocumentProperties: $builtinProperties"
-            
+    
             if ($null -eq $builtinProperties) {
                 Write-Host "BuiltInDocumentProperties is null."
             } else {
                 Write-Host "Type of BuiltInDocumentProperties: $($builtinProperties.GetType().FullName)"
-                Get-Properties -Properties $builtinProperties -PropertyNames $BuiltinPropertiesGroup -objHash $properties -binding $binding
+                
+                # ビルトインプロパティを取得
+                foreach ($propertyName in $BuiltinPropertiesGroup) {
+                    try {
+                        $propertyValue = $builtinProperties.Item($propertyName).Value
+                        $properties[$propertyName] = $propertyValue
+                        Write-Host "$($propertyName): $propertyValue"
+                    } catch {
+                        Write-Host "Failed to get property '$propertyName': $_" -ForegroundColor Red
+                    }
+                }
             }
             Write-Host "END Standard Properties (ビルドインプロパティ) :"
     
             Write-Host "`nStart Custom Properties (カスタムプロパティ):"
             $customProperties = $this.Document.CustomDocumentProperties
-            Get-Properties -Properties $customProperties -PropertyNames $CustomPropertiesGroup -objHash $properties -binding $binding
+            foreach ($propertyName in $CustomPropertiesGroup) {
+                try {
+                    $propertyValue = $customProperties.Item($propertyName).Value
+                    $properties[$propertyName] = $propertyValue
+                    Write-Host "$($propertyName): $propertyValue"
+                } catch {
+                    Write-Host "Failed to get property '$propertyName': $_" -ForegroundColor Red
+                }
+            }
             Write-Host "End Custom Properties (カスタムプロパティ):"
         } catch {
             Write-Error "プロパティの取得に失敗しました: $_"
