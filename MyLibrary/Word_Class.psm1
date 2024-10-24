@@ -6,13 +6,13 @@ class Word {
     [object]$Application
     [object]$Document
     [hashtable]$DocumentProperties
-    [object]$PC
+    [MyPC]$PC
     [string]$IniFilePath
 
-    Word([string]$filePath, [object]$pc, [string]$iniFilePath) {
+    Word([string]$filePath, [MyPC]$pc, [string]$iniFilePath) {
         $this.PC = $pc
         $this.IniFilePath = $iniFilePath
-        if (-not $this.CheckLibraryConfigured()) {
+        if (-not $pc.IsLibraryConfigured) {
             Write-Error "Microsoft.Office.Interop.Word ライブラリが設定されていません。"
             return
         }
@@ -127,9 +127,18 @@ class Word {
         try {
             Write-Host "Start Standard Properties (ビルドインプロパティ):"
             $builtinProperties = $this.Document.BuiltInDocumentProperties
-            Get-Properties -Properties $builtinProperties -PropertyNames $BuiltinPropertiesGroup -objHash $properties -binding $binding
-            Write-Host "END Standard Properties (ビルドインプロパティ) :"
 
+            # 値を確認
+            Write-Host "Value of BuiltInDocumentProperties: $builtinProperties"
+            
+            if ($null -eq $builtinProperties) {
+                Write-Host "BuiltInDocumentProperties is null."
+            } else {
+                Write-Host "Type of BuiltInDocumentProperties: $($builtinProperties.GetType().FullName)"
+                Get-Properties -Properties $builtinProperties -PropertyNames $BuiltinPropertiesGroup -objHash $properties -binding $binding
+            }
+            Write-Host "END Standard Properties (ビルドインプロパティ) :"
+    
             Write-Host "`nStart Custom Properties (カスタムプロパティ):"
             $customProperties = $this.Document.CustomDocumentProperties
             Get-Properties -Properties $customProperties -PropertyNames $CustomPropertiesGroup -objHash $properties -binding $binding
