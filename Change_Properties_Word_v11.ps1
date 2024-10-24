@@ -69,7 +69,7 @@ class Main {
 
         # Wordアプリケーションを起動
         Write-Host "Wordアプリケーションを起動中..."
-        $word = [Word]::new($this.filePath, $this.pc, $this.iniFilePath)
+        $word = [Word]::new($filePath, $pc, $this.iniFilePath)
 
         try {
             # 文書プロパティを表示

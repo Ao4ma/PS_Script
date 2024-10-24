@@ -6,20 +6,21 @@ class Word {
     [object]$Application
     [object]$Document
     [hashtable]$DocumentProperties
-    [object]$PC
+    [MyPC]$PC
     [string]$IniFilePath
 
-    Word([string]$filePath, [object]$pc, [string]$iniFilePath) {
+    Word([string]$filePath, [MyPC]$pc, [string]$iniFilePath) {
         $this.PC = $pc
         $this.IniFilePath = $iniFilePath
-        if (-not $this.CheckLibraryConfigured()) {
-            Write-Error "Microsoft.Office.Interop.Word ライブラリが設定されていません。"
+        if (-not $pc.IsLibraryConfigured) {
+            Write-Error "Microsoft.Office.Interop.Word ライブラリが設定されていません。再確認"
             return
         }
 
         $this.Application = New-Object -ComObject Word.Application
         $this.Application.Visible = $true
         $this.Document = $this.Application.Documents.Open($filePath)
+        
         $this.DocumentProperties = $this.GetAllDocumentProperties()
 
         # プロパティをINIファイルに出力
