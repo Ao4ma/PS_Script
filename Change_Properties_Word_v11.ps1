@@ -40,6 +40,16 @@ class Main {
         # ドキュメントのパスを取得
         $docFilePath = $ini.GetValue("DocFile", "DocFilePath")
         $docFileName = $ini.GetValue("DocFile", "DocFileName")
+
+        # 値を確認
+        Write-Host "DocFilePath: $docFilePath"
+        Write-Host "DocFileName: $docFileName"
+
+        if ([string]::IsNullOrEmpty($docFilePath) -or [string]::IsNullOrEmpty($docFileName)) {
+            Write-Error "DocFilePathまたはDocFileNameが空です。"
+            return
+        }
+
         $filePath = Join-Path -Path $docFilePath -ChildPath $docFileName
 
         # ドキュメントを処理

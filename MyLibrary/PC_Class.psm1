@@ -55,13 +55,9 @@ class MyPC {
 
         try {
             foreach ($section in $this.IniContent) {
-                Write-Host "Checking section: $($section["Section"])"
-                if ($section["Section"] -eq "OfficeLibrary") {
-                    Write-Host "Section is OfficeLibrary"
+                if ($section["Section"] -eq "LibraryPath") {
                     $libraryPath = $section["LibraryPath"]
-                    Write-Host "LibraryPath: $libraryPath"
                     if (Test-Path $libraryPath) {
-                        Write-Host "LibraryPath exists"
                         Add-Type -Path $libraryPath
                         Write-Host "Imported Interop Assembly from $libraryPath"
                         return $true
@@ -69,8 +65,6 @@ class MyPC {
                         Write-Warning "Interop Assembly path is invalid or not found: $libraryPath"
                         return $false
                     }
-                } else {
-                    Write-Host "Section is not OfficeLibrary"
                 }
             }
         } catch {

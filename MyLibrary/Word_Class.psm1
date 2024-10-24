@@ -13,14 +13,13 @@ class Word {
         $this.PC = $pc
         $this.IniFilePath = $iniFilePath
         if (-not $pc.IsLibraryConfigured) {
-            Write-Error "Microsoft.Office.Interop.Word ライブラリが設定されていません。再確認"
+            Write-Error "Microsoft.Office.Interop.Word ライブラリが設定されていません。"
             return
         }
 
         $this.Application = New-Object -ComObject Word.Application
         $this.Application.Visible = $true
         $this.Document = $this.Application.Documents.Open($filePath)
-        
         $this.DocumentProperties = $this.GetAllDocumentProperties()
 
         # プロパティをINIファイルに出力
@@ -128,12 +127,36 @@ class Word {
         try {
             Write-Host "Start Standard Properties (ビルドインプロパティ):"
             $builtinProperties = $this.Document.BuiltInDocumentProperties
-            Get-Properties -Properties $builtinProperties -PropertyNames $BuiltinPropertiesGroup -objHash $properties -binding $binding
+    
+            if ($null -eq $builtinProperties) {
+                Write-Host "BuiltInDocumentProperties is null."
+            } else {
+                Write-Host "Type of BuiltInDocumentProperties: $($builtinProperties.GetType().FullName)"
+                
+                # ビルトインプロパティを取得
+                foreach ($propertyName in $BuiltinPropertiesGroup) {
+                    try {
+                        $propertyValue = $builtinProperties.Item($propertyName).Value
+                        $properties[$propertyName] = $propertyValue
+                        Write-Host "$($propertyName): $propertyValue"
+                    } catch {
+                        Write-Host "Failed to get property '$propertyName': $_" -ForegroundColor Red
+                    }
+                }
+            }
             Write-Host "END Standard Properties (ビルドインプロパティ) :"
-
+    
             Write-Host "`nStart Custom Properties (カスタムプロパティ):"
             $customProperties = $this.Document.CustomDocumentProperties
-            Get-Properties -Properties $customProperties -PropertyNames $CustomPropertiesGroup -objHash $properties -binding $binding
+            foreach ($propertyName in $CustomPropertiesGroup) {
+                try {
+                    $propertyValue = $customProperties.Item($propertyName).Value
+                    $properties[$propertyName] = $propertyValue
+                    Write-Host "$($propertyName): $propertyValue"
+                } catch {
+                    Write-Host "Failed to get property '$propertyName': $_" -ForegroundColor Red
+                }
+            }
             Write-Host "End Custom Properties (カスタムプロパティ):"
         } catch {
             Write-Error "プロパティの取得に失敗しました: $_"

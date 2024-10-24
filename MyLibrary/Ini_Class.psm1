@@ -25,6 +25,15 @@ class IniFile {
         return $iniContent
     }
 
+    [void]SetContent([hashtable]$content) {
+        $iniContent = ""
+        foreach ($key in $content.Keys) {
+            $iniContent += "$key=$($content[$key])`n"
+        }
+        Set-Content -Path $this.FilePath -Value $iniContent
+    }
+
+
     [System.Collections.Generic.List[hashtable]]GetIniContentAsList() {
         $iniContent = [System.Collections.Generic.List[hashtable]]::new()
         $currentSection = $null
