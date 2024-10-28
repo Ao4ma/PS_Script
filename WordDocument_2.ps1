@@ -41,21 +41,44 @@ class WordDocument {
     }
 
     [void] Check_Custom_Property() {
-        Write-Host "IN: Check_Custom_Property"
+        Write-Host "Entering Check_Custom_Property"
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
         $customProps = $doc.CustomDocumentProperties
         $customPropsList = @()
 
-        foreach ($prop in $customProps) {
-            $customPropsList += $prop.Name
+        if ($null -eq $customProps) {
+            Write-Host "customProps is null"
+        } else {
+            $binding = "System.Reflection.BindingFlags" -as [type]
+            [ref]$SaveOption = "Microsoft.Office.Interop.Word.WdSaveOptions" -as [type]
+            
+            foreach ($prop in $customProps) {
+                try {
+                    $propName = [System.__ComObject].InvokeMember("Name", $binding::GetProperty, $null, $prop, $null)
+                    $customPropsList += $propName
+                } catch {
+                    Write-Host "Failed to get property name: $_" -ForegroundColor Red
+                }
+            }
+
+            $customPropsList | Out-File -FilePath (Join-Path -Path $this.ScriptRoot -ChildPath "custom_properties.txt")
         }
 
-        $customPropsList | Out-File -FilePath (Join-Path -Path $this.ScriptRoot -ChildPath "custom_properties.txt")
-        $doc.Close()
+        # ドキュメントを保存せずに閉じる
+        $doc.Close($SaveOption)
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($customProps) | Out-Null
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null
+        Remove-Variable -Name doc, customProps
+
         $word.Quit()
-        Write-Host "OUT: Check_Custom_Property"
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null
+        Remove-Variable -Name word
+        [gc]::collect()
+        [gc]::WaitForPendingFinalizers()
+
+        Write-Host "Exiting Check_Custom_Property"
     }
 
     [void] Create_Property([string]$propName, [string]$propValue) {
@@ -174,6 +197,8 @@ class WordDocument {
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
 
+        $binding = "System.Reflection.BindingFlags" -as [type]
+
         if ($PropertyType -eq "Builtin" -or $PropertyType -eq "Both") {
             $Properties = $doc.BuiltInDocumentProperties
             foreach ($p in $BuiltinPropertiesGroup) {
@@ -202,8 +227,19 @@ class WordDocument {
             }
         }
 
-        $doc.Close()
+        # ドキュメントを保存せずに閉じる
+        [ref]$SaveOption = "Microsoft.Office.Interop.Word.WdSaveOptions" -as [type]
+        $doc.Close($SaveOption)
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Properties) | Out-Null
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null
+        Remove-Variable -Name doc, Properties
+
         $word.Quit()
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null
+        Remove-Variable -Name word
+        [gc]::collect()
+        [gc]::WaitForPendingFinalizers()
+
         Write-Host "OUT: Get_Properties"
         return $objHash
     }
