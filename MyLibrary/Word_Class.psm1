@@ -23,7 +23,7 @@ class Word {
         $this.DocumentProperties = $this.GetAllDocumentProperties()
 
         # プロパティをINIファイルに出力
-        $iniFile = [IniFile]::new($this.IniFilePath)
+        $iniFile = [IniFile]::new($IniFilePath)
         $iniFile.SetContent($this.DocumentProperties)
 
         # 5分後に自動解放
