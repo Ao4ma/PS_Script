@@ -10,7 +10,7 @@ class WordDocument {
     }
 
     [void] Check_PC_Env() {
-        Write-Host "Entering Check_PC_Env"
+        Write-Host "IN: Check_PC_Env"
         $envInfo = @{
             "PCName" = $env:COMPUTERNAME
             "PowerShellHome" = $env:PSHOME
@@ -19,11 +19,11 @@ class WordDocument {
             "ScriptLibraryPath" = $this.ScriptRoot
         }
         $envInfo
-        Write-Host "Exiting Check_PC_Env"
+        Write-Host "OUT: Check_PC_Env"
     }
 
     [void] Check_Word_Library() {
-        Write-Host "Entering Check_Word_Library"
+        Write-Host "IN: Check_Word_Library"
         $libraryPath = "C:\Windows\assembly\GAC_MSIL\Microsoft.Office.Interop.Word\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.Word.dll"
         if (Test-Path $libraryPath) {
             Write-Host "Word library found at $($libraryPath)"
@@ -37,11 +37,11 @@ class WordDocument {
                 throw "Word library not found. Please install the required library."
             }
         }
-        Write-Host "Exiting Check_Word_Library"
+        Write-Host "OUT: Check_Word_Library"
     }
 
     [void] Check_Custom_Property() {
-        Write-Host "Entering Check_Custom_Property"
+        Write-Host "IN: Check_Custom_Property"
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
@@ -55,60 +55,89 @@ class WordDocument {
         $customPropsList | Out-File -FilePath (Join-Path -Path $this.ScriptRoot -ChildPath "custom_properties.txt")
         $doc.Close()
         $word.Quit()
-        Write-Host "Exiting Check_Custom_Property"
+        Write-Host "OUT: Check_Custom_Property"
     }
 
     [void] Create_Property([string]$propName, [string]$propValue) {
-        Write-Host "Entering Create_Property with propName=$propName, propValue=$propValue"
+        Write-Host "IN: Create_Property"
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
         $customProps = $doc.CustomDocumentProperties
 
         if ($null -eq $customProps) {
-            Write-Host "customProps is null"
-        } else {
-            $customProps.Add($propName, $false, 4, $propValue)
-            $doc.Save()
+            Write-Host -ForegroundColor Red "CustomDocumentProperties is null. Cannot add property."
+            $doc.Close()
+            $word.Quit()
+            Write-Host "OUT: Create_Property"
+            return
         }
 
+        $customProps.Add($propName, $false, 4, $propValue)
+        $doc.Save()
         $doc.Close()
         $word.Quit()
-        Write-Host "Exiting Create_Property"
+        Write-Host "OUT: Create_Property"
     }
 
     [string] Read_Property([string]$propName) {
-        Write-Host "Entering Read_Property with propName=$propName"
+        Write-Host "IN: Read_Property"
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
         $customProps = $doc.CustomDocumentProperties
+
+        if ($null -eq $customProps) {
+            Write-Host -ForegroundColor Red "CustomDocumentProperties is null. Cannot read property."
+            $doc.Close()
+            $word.Quit()
+            Write-Host "OUT: Read_Property"
+            return $null
+        }
+
         $propValue = $customProps.Item($propName).Value
         $doc.Close()
         $word.Quit()
-        Write-Host "Exiting Read_Property with propValue=$propValue"
+        Write-Host "OUT: Read_Property"
         return $propValue
     }
 
     [void] Update_Property([string]$propName, [string]$propValue) {
-        Write-Host "Entering Update_Property with propName=$propName, propValue=$propValue"
+        Write-Host "IN: Update_Property"
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
         $customProps = $doc.CustomDocumentProperties
+
+        if ($null -eq $customProps) {
+            Write-Host -ForegroundColor Red "CustomDocumentProperties is null. Cannot update property."
+            $doc.Close()
+            $word.Quit()
+            Write-Host "OUT: Update_Property"
+            return
+        }
+
         $customProps.Item($propName).Value = $propValue
         $doc.Save()
         $doc.Close()
         $word.Quit()
-        Write-Host "Exiting Update_Property"
+        Write-Host "OUT: Update_Property"
     }
 
     [void] Delete_Property([string]$propName) {
-        Write-Host "Entering Delete_Property with propName=$propName"
+        Write-Host "IN: Delete_Property"
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
         $customProps = $doc.CustomDocumentProperties
+
+        if ($null -eq $customProps) {
+            Write-Host -ForegroundColor Red "CustomDocumentProperties is null. Cannot delete property."
+            $doc.Close()
+            $word.Quit()
+            Write-Host "OUT: Delete_Property"
+            return
+        }
 
         try {
             $prop = [System.__ComObject].InvokeMember("Item", "GetProperty", $null, $customProps, $propName)
@@ -120,11 +149,11 @@ class WordDocument {
         $doc.Save()
         $doc.Close()
         $word.Quit()
-        Write-Host "Exiting Delete_Property"
+        Write-Host "OUT: Delete_Property"
     }
 
     [hashtable] Get_Properties([string]$PropertyType) {
-        Write-Host "Entering Get_Properties with PropertyType=$PropertyType"
+        Write-Host "IN: Get_Properties"
         $BuiltinPropertiesGroup = @(
             "Title", "Subject", "Author", "Keywords", "Comments", "Template", "Last Author", 
             "Revision Number", "Application Name", "Last Print Date", "Creation Date", 
@@ -175,8 +204,30 @@ class WordDocument {
 
         $doc.Close()
         $word.Quit()
-        Write-Host "Exiting Get_Properties"
+        Write-Host "OUT: Get_Properties"
         return $objHash
+    }
+
+    [void] Close_Word_Processes() {
+        Write-Host "IN: Close_Word_Processes"
+        $existingWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
+        if ($existingWordProcesses) {
+            foreach ($process in $existingWordProcesses) {
+                Stop-Process -Id $process.Id -Force
+            }
+        }
+        Write-Host "OUT: Close_Word_Processes"
+    }
+
+    [void] Ensure_Word_Closed() {
+        Write-Host "IN: Ensure_Word_Closed"
+        $newWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
+        if ($newWordProcesses) {
+            foreach ($process in $newWordProcesses) {
+                Stop-Process -Id $process.Id -Force
+            }
+        }
+        Write-Host "OUT: Ensure_Word_Closed"
     }
 }
 
