@@ -12,7 +12,7 @@ class WordDocument {
     [void] Check_PC_Env() {
         $envInfo = @{
             "PCName" = $env:COMPUTERNAME
-            "PowerShellHome" = $PSHOME
+            "PowerShellHome" = $env:PSHOME
             "IPAddress" = (Get-NetIPAddress -AddressFamily IPv4).IPAddress
             "DocFilePath" = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
             "ScriptLibraryPath" = $this.ScriptRoot
@@ -23,12 +23,12 @@ class WordDocument {
     [void] Check_Word_Library() {
         $libraryPath = "C:\Windows\assembly\GAC_MSIL\Microsoft.Office.Interop.Word\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.Word.dll"
         if (Test-Path $libraryPath) {
-            Write-Host "Word library found at $libraryPath"
+            Write-Host "Word library found at $($libraryPath)"
         } else {
-            Write-Host "Word library not found at $libraryPath. Searching the entire system..."
+            Write-Host "Word library not found at $($libraryPath). Searching the entire system..."
             $libraryPath = Get-ChildItem -Path "C:\" -Recurse -Filter "Microsoft.Office.Interop.Word.dll" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
             if ($libraryPath) {
-                Write-Host "Word library found at $libraryPath"
+                Write-Host "Word library found at $($libraryPath)"
             } else {
                 Write-Host -ForegroundColor Red "Word library not found on this system."
                 throw "Word library not found. Please install the required library."
@@ -36,7 +36,7 @@ class WordDocument {
         }
     }
 
-    [void] check_custom_Property() {
+    [void] Check_Custom_Property() {
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
@@ -52,13 +52,19 @@ class WordDocument {
         $word.Quit()
     }
 
-    [void] create_Property([string]$propName, [string]$propValue) {
+    [void] Create_Property([string]$propName, [string]$propValue) {
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
         $customProps = $doc.CustomDocumentProperties
-        $customProps.Add($propName, $false, 4, $propValue)
-        $doc.Save()
+
+        if ($null -eq $customProps) {
+            Write-Host "customProps is null"
+        } else {
+            $customProps.Add($propName, $false, 4, $propValue)
+            $doc.Save()
+        }
+
         $doc.Close()
         $word.Quit()
     }
@@ -95,7 +101,7 @@ class WordDocument {
             $prop = [System.__ComObject].InvokeMember("Item", "GetProperty", $null, $customProps, $propName)
             [System.__ComObject].InvokeMember("Delete", "Method", $null, $prop, $null)
         } catch {
-            Write-Host -ForegroundColor Red "Property $propName not found."
+            Write-Host -ForegroundColor Red "Property $($propName) not found."
         }
 
         $doc.Save()
@@ -103,7 +109,7 @@ class WordDocument {
         $word.Quit()
     }
 
-    [hashtable] Get-Properties([string]$PropertyType) {
+    [hashtable] Get_Properties([string]$PropertyType) {
         $BuiltinPropertiesGroup = @(
             "Title", "Subject", "Author", "Keywords", "Comments", "Template", "Last Author", 
             "Revision Number", "Application Name", "Last Print Date", "Creation Date", 
@@ -133,7 +139,7 @@ class WordDocument {
                     $objHash[$p] = $value
                     $foundProperties += $p
                 } catch [System.Exception] {
-                    Write-Host -ForegroundColor Blue "Value not found for $p"
+                    Write-Host -ForegroundColor Blue "Value not found for $($p)"
                 }
             }
         }
@@ -147,7 +153,7 @@ class WordDocument {
                     $objHash[$p] = $value
                     $foundProperties += $p
                 } catch [System.Exception] {
-                    Write-Host -ForegroundColor Blue "Value not found for $p"
+                    Write-Host -ForegroundColor Blue "Value not found for $($p)"
                 }
             }
         }
@@ -180,9 +186,9 @@ $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
 # メソッドの呼び出し例
 $wordDoc.Check_PC_Env()
 $wordDoc.Check_Word_Library()
-$wordDoc.check_custom_Property()
-$wordDoc.create_Property("NewProp", "NewValue")
+$wordDoc.Check_Custom_Property()
+$wordDoc.Create_Property("NewProp", "NewValue")
 $propValue = $wordDoc.Read_Property("NewProp")
 $wordDoc.Update_Property("NewProp", "UpdatedValue")
 $wordDoc.Delete_Property("NewProp")
-$properties = $
+$properties = $wordDoc.Get_Properties("Both")
