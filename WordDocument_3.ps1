@@ -26,59 +26,11 @@ class WordDocument {
         Write-Host "IN: Check_Word_Library"
         $libraryPath = "C:\Windows\assembly\GAC_MSIL\Microsoft.Office.Interop.Word\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.Word.dll"
         if (Test-Path $libraryPath) {
-            Write-Host "Word library found at $($libraryPath)"
+            Write-Host "Microsoft.Office.Interop.Word ライブラリが見つかりました。"
         } else {
-            Write-Host "Word library not found at $($libraryPath). Searching the entire system..."
-            $libraryPath = Get-ChildItem -Path "C:\" -Recurse -Filter "Microsoft.Office.Interop.Word.dll" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-            if ($libraryPath) {
-                Write-Host "Word library found at $($libraryPath)"
-            } else {
-                Write-Host -ForegroundColor Red "Word library not found on this system."
-                throw "Word library not found. Please install the required library."
-            }
+            Write-Host -ForegroundColor Red "Microsoft.Office.Interop.Word ライブラリが見つかりません。"
         }
         Write-Host "OUT: Check_Word_Library"
-    }
-
-    [void] Check_Custom_Property() {
-        Write-Host "Entering Check_Custom_Property"
-        $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
-        $word = New-Object -ComObject Word.Application
-        $doc = $word.Documents.Open($docPath)
-        $customProps = $doc.CustomDocumentProperties
-        $customPropsList = @()
-
-        if ($null -eq $customProps) {
-            Write-Host "customProps is null"
-        } else {
-            $binding = "System.Reflection.BindingFlags" -as [type]
-            [ref]$SaveOption = "Microsoft.Office.Interop.Word.WdSaveOptions" -as [type]
-            
-            foreach ($prop in $customProps) {
-                try {
-                    $propName = [System.__ComObject].InvokeMember("Name", $binding::GetProperty, $null, $prop, $null)
-                    $customPropsList += $propName
-                } catch {
-                    Write-Host "Failed to get property name: $_" -ForegroundColor Red
-                }
-            }
-
-            $customPropsList | Out-File -FilePath (Join-Path -Path $this.ScriptRoot -ChildPath "custom_properties.txt")
-        }
-
-        # ドキュメントを保存せずに閉じる
-        $doc.Close($SaveOption)
-        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($customProps) | Out-Null
-        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null
-        Remove-Variable -Name doc, customProps
-
-        $word.Quit()
-        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null
-        Remove-Variable -Name word
-        [gc]::collect()
-        [gc]::WaitForPendingFinalizers()
-
-        Write-Host "Exiting Check_Custom_Property"
     }
 
     [void] Create_Property([string]$propName, [string]$propValue) {
@@ -87,14 +39,12 @@ class WordDocument {
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
         $customProps = $doc.CustomDocumentProperties
-        $binding = "System.Reflection.BindingFlags" -as [type]
-        [array]$arrayArgs = $PropName,$false, 4, $propValue
-    
+
         # 値を確認
         Write-Host "CustomDocumentProperties: $customProps"
         Write-Host "PropName: $propName"
         Write-Host "PropValue: $propValue"
-    
+
         if ($null -eq $customProps) {
             Write-Host -ForegroundColor Red "CustomDocumentProperties is null. Cannot add property."
             $doc.Close()
@@ -102,21 +52,20 @@ class WordDocument {
             Write-Host "OUT: Create_Property"
             return
         }
-    
+
         try {
             $customProps.Add($propName, $false, 4, $propValue)
-            [System.__ComObject].InvokeMember("add", $binding::InvokeMethod,$null,$customProps,$arrayArgs) | out-null
         } catch {
             Write-Host -ForegroundColor Red "Failed to add property '$propName': $_"
             try {
-                $propertyObject = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProps, @($propName))
-                [System.__ComObject].InvokeMember("Delete", $binding::InvokeMethod, $null, $propertyObject, $null)
-                [System.__ComObject].InvokeMember("Add", $binding::InvokeMethod, $null, $customProps, $arrayArgs) | Out-Null
+                $prop = $customProps.Item($propName)
+                $prop.Delete()
+                $customProps.Add($propName, $false, 4, $propValue)
             } catch {
                 Write-Host -ForegroundColor Red "Failed to delete and re-add property '$propName': $_"
             }
         }
-    
+
         $doc.Save()
         $doc.Close()
         $word.Quit()
@@ -213,8 +162,8 @@ class WordDocument {
         }
 
         try {
-            $prop = [System.__ComObject].InvokeMember("Item", "GetProperty", $null, $customProps, $propName)
-            [System.__ComObject].InvokeMember("Delete", "Method", $null, $prop, $null)
+            $prop = $customProps.Item($propName)
+            $prop.Delete()
         } catch {
             Write-Host -ForegroundColor Red "Property $($propName) not found."
         }
@@ -247,17 +196,15 @@ class WordDocument {
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
 
-        $binding = "System.Reflection.BindingFlags" -as [type]
-
         if ($PropertyType -eq "Builtin" -or $PropertyType -eq "Both") {
             $Properties = $doc.BuiltInDocumentProperties
             foreach ($p in $BuiltinPropertiesGroup) {
                 try {
-                    $pn = [System.__ComObject].InvokeMember("Item", "GetProperty", $null, $Properties, $p)
-                    $value = [System.__ComObject].InvokeMember("Value", "GetProperty", $null, $pn, $null)
+                    $pn = $Properties.Item($p)
+                    $value = $pn.Value
                     $objHash[$p] = $value
                     $foundProperties += $p
-                } catch [System.Exception] {
+                } catch {
                     Write-Host -ForegroundColor Blue "Value not found for $($p)"
                 }
             }
@@ -267,11 +214,11 @@ class WordDocument {
             $Properties = $doc.CustomDocumentProperties
             foreach ($p in $CustomPropertiesGroup) {
                 try {
-                    $pn = [System.__ComObject].InvokeMember("Item", "GetProperty", $null, $Properties, $p)
-                    $value = [System.__ComObject].InvokeMember("Value", "GetProperty", $null, $pn, $null)
+                    $pn = $Properties.Item($p)
+                    $value = $pn.Value
                     $objHash[$p] = $value
                     $foundProperties += $p
-                } catch [System.Exception] {
+                } catch {
                     Write-Host -ForegroundColor Blue "Value not found for $($p)"
                 }
             }
@@ -336,7 +283,6 @@ $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
 # メソッドの呼び出し例
 $wordDoc.Check_PC_Env()
 $wordDoc.Check_Word_Library()
-$wordDoc.Check_Custom_Property()
 $wordDoc.Create_Property("NewProp", "NewValue")
 $propValue = $wordDoc.Read_Property("NewProp")
 $wordDoc.Update_Property("NewProp", "UpdatedValue")
