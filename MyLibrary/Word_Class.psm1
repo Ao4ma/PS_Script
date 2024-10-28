@@ -52,12 +52,12 @@ class Word {
 
             # ビルトインプロパティを設定
             $Properties = $this.Document.BuiltInDocumentProperties
-            $propertySet = Set-Property -Properties $Properties -propertyName $propertyName -newValue $newValue -binding $binding
+            $propertySet = SetProperty -Properties $Properties -propertyName $propertyName -newValue $newValue -binding $binding
 
             # カスタムプロパティを設定
             if (-not $propertySet) {
                 $Properties = $this.Document.CustomDocumentProperties
-                $propertySet = Set-Property -Properties $Properties -propertyName $propertyName -newValue $newValue -binding $binding
+                $propertySet = SetProperty -Properties $Properties -propertyName $propertyName -newValue $newValue -binding $binding
 
                 # 新規カスタムプロパティの作成
                 if ($isNewCustomProperty) {
@@ -96,12 +96,12 @@ class Word {
 
         # ビルトインプロパティを取得
         $Properties = $this.Document.BuiltInDocumentProperties
-        $value = Get-Property -Properties $Properties -propertyName $propertyName -binding $binding
+        $value = GetProperty -Properties $Properties -propertyName $propertyName -binding $binding
 
         # カスタムプロパティを取得
         if ($null -eq $value) {
             $Properties = $this.Document.CustomDocumentProperties
-            $value = Get-Property -Properties $Properties -propertyName $propertyName -binding $binding
+            $value = GetProperty -Properties $Properties -propertyName $propertyName -binding $binding
         }
 
         return $value
