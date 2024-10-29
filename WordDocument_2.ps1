@@ -92,6 +92,13 @@ class WordDocument {
 
     [void] Create_Property([string]$propName, [string]$propValue) {
         Write-Host "IN: Create_Property"
+
+        # 必要なアセンブリをロード
+        Add-Type -AssemblyName "Microsoft.Office.Interop.Word"
+
+        # WdSaveOptions 型を取得
+        $SaveOption = [type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
+
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
@@ -113,7 +120,6 @@ class WordDocument {
         }
     
         try {
-            $customProps.Add($propName, $false, 4, $propValue)
             [System.__ComObject].InvokeMember("add", $binding::InvokeMethod,$null,$customProps,$arrayArgs) | out-null
         } catch {
             Write-Host -ForegroundColor Red "Failed to add property '$propName': $_"
@@ -126,13 +132,14 @@ class WordDocument {
             }
         }
     
-        $doc.Save()
-        $doc.Close()
+        # ドキュメントを保存して閉じる
+        $doc.Close([ref]$SaveOption::wdSaveChanges)
+
         $word.Quit()
         Write-Host "OUT: Create_Property"
     }
 
-    
+
     [string] Read_Property([string]$propName) {
         Write-Host "IN: Read_Property"
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
