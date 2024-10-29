@@ -1,2 +1,2 @@
-バッター
-NewProp
+清水
+CustomPropT

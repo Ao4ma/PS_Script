@@ -38,16 +38,16 @@ class WordDocument {
     }
 
     # COMオブジェクトのメンバーを呼び出すメソッド
-    [object] InvokeComObjectMember([object]$ComObject, [string]$MemberName, [string]$Action, [array]$Args = @()) {
+    [object] InvokeComObjectMember([object]$ComObject, [string]$MemberName, [string]$Action, [array]$Parameters = @()) {
         $binding = "System.Reflection.BindingFlags" -as [type]
         try {
             if ($Action -eq "GetProperty") {
-                return [System.__ComObject].InvokeMember($MemberName, $binding::GetProperty, $null, $ComObject, $Args)
+                return [System.__ComObject].InvokeMember($MemberName, $binding::GetProperty, $null, $ComObject, $Parameters)
             } elseif ($Action -eq "SetProperty") {
-                [System.__ComObject].InvokeMember($MemberName, $binding::SetProperty, $null, $ComObject, $Args) | Out-Null
+                [System.__ComObject].InvokeMember($MemberName, $binding::SetProperty, $null, $ComObject, $Parameters) | Out-Null
                 return $null
             } elseif ($Action -eq "InvokeMethod") {
-                [System.__ComObject].InvokeMember($MemberName, $binding::InvokeMethod, $null, $ComObject, $Args) | Out-Null
+                [System.__ComObject].InvokeMember($MemberName, $binding::InvokeMethod, $null, $ComObject, @($Parameters)) | Out-Null
                 return $null
             }
         } catch [System.Exception] {
@@ -126,14 +126,14 @@ class WordDocument {
         $libraryPath = "C:\Windows\assembly\GAC_MSIL\Microsoft.Office.Interop.Word\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.Word.dll"
         if (Test-Path $libraryPath) {
             Add-Type -Path $libraryPath
-            $SaveOption = [System.Type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
+            # $SaveOption = [System.Type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
             Write-Host "Word library found at $($libraryPath)"
         } else {
             Write-Host "Word library not found at $($libraryPath). Searching the entire system..."
             $libraryPath = Get-ChildItem -Path "C:\" -Recurse -Filter "Microsoft.Office.Interop.Word.dll" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
             if ($libraryPath) {
                 Add-Type -Path $libraryPath
-                $SaveOption = [System.Type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
+                # $SaveOption = [System.Type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
                 Write-Host "Word library found at $($libraryPath)"
             } else {
                 Write-Host -ForegroundColor Red "Word library not found on this system."
