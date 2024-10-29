@@ -38,7 +38,7 @@ class WordDocument {
     }
 
     # COMオブジェクトのメンバーを呼び出すメソッド
-    [object] InvokeComObjectMember([object]$ComObject, [string]$MemberName, [string]$Action, [array]$Args = $null) {
+    [object] InvokeComObjectMember([object]$ComObject, [string]$MemberName, [string]$Action, [array]$Args = @()) {
         $binding = "System.Reflection.BindingFlags" -as [type]
         try {
             if ($Action -eq "GetProperty") {
@@ -155,7 +155,7 @@ class WordDocument {
 
         $customPropsList = @()
         foreach ($prop in $customProps) {
-            $propName = $this.InvokeComObjectMember($prop, "Name", "GetProperty")
+            $propName = $this.InvokeComObjectMember($prop, "Name", "GetProperty", @())
             if ($null -ne $propName) {
                 $customPropsList += $propName
             }
@@ -198,7 +198,7 @@ class WordDocument {
             return $null
         }
 
-        $propValue = $this.InvokeComObjectMember($prop, "Value", "GetProperty")
+        $propValue = $this.InvokeComObjectMember($prop, "Value", "GetProperty", @())
         Write-Host "OUT: Read_Property"
         return $propValue
     }
@@ -238,7 +238,7 @@ class WordDocument {
             return
         }
 
-        $this.InvokeComObjectMember($prop, "Delete", "InvokeMethod")
+        $this.InvokeComObjectMember($prop, "Delete", "InvokeMethod", @())
         $this.SaveDocumentWithBackup()
         Write-Host "OUT: Delete_Property"
     }
@@ -336,6 +336,6 @@ $properties = $wordDoc.Get_Properties("Both")
 # ドキュメントを閉じる
 $wordDoc.Close_Document()
 
-♯ Get-Process -Name WINWORD | Stop-Process -Force
-♯ $word = New-Object -ComObject Word.Application
-♯ $doc = $word.Documents.Open($docPath)
+# Get-Process -Name WINWORD | Stop-Process -Force
+# $word = New-Object -ComObject Word.Application
+# $doc = $word.Documents.Open($docPath)
