@@ -327,9 +327,12 @@ $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
 $wordDoc.Check_PC_Env()
 $wordDoc.Check_Word_Library()
 $wordDoc.Check_Custom_Property()
+$wordDoc.Create_Property("NewProp", "NewValue")
 $wordDoc.Create_Property("NewProp2", "NewValue2")
+$wordDoc.Create_Property("清水", "エスパルス")
 $propValue = $wordDoc.Read_Property("NewProp")
 $wordDoc.Update_Property("NewProp", "UpdatedValue")
+
 $wordDoc.Delete_Property("NewProp")
 $properties = $wordDoc.Get_Properties("Both")
 
