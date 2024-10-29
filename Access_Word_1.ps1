@@ -335,3 +335,7 @@ $properties = $wordDoc.Get_Properties("Both")
 
 # ドキュメントを閉じる
 $wordDoc.Close_Document()
+
+♯ Get-Process -Name WINWORD | Stop-Process -Force
+♯ $word = New-Object -ComObject Word.Application
+♯ $doc = $word.Documents.Open($docPath)
