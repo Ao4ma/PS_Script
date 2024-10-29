@@ -75,7 +75,8 @@ class WordDocument {
         }
 
         # ドキュメントを保存せずに閉じる
-        $doc.Close($SaveOption)
+        # $doc.Close($SaveOption)
+        $doc.Close()
         [System.Runtime.InteropServices.Marshal]::ReleaseComObject($customProps) | Out-Null
         [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null
         Remove-Variable -Name doc, customProps
@@ -89,15 +90,20 @@ class WordDocument {
         Write-Host "Exiting Check_Custom_Property"
     }
 
+    
 
     [void] Create_Property([string]$propName, [string]$propValue) {
         Write-Host "IN: Create_Property"
 
         # 必要なアセンブリをロード
-        Add-Type -AssemblyName "Microsoft.Office.Interop.Word"
+        # Add-Type -AssemblyName "Microsoft.Office.Interop.Word"
+        #$libraryPath = "C:\Windows\assembly\GAC_MSIL\Microsoft.Office.Interop.Word\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.Word.dll"
+        #Add-Type -Path $libraryPath       
+        #[ref]$SaveOption = "Microsoft.Office.Interop.Word.WdSaveOptions" -as [type]
 
         # WdSaveOptions 型を取得
-        $SaveOption = [type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
+        # $SaveOption = [type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
+        #Write-Host "SaveOption: [ref]$SaveOption"
 
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $word = New-Object -ComObject Word.Application
@@ -133,8 +139,9 @@ class WordDocument {
         }
     
         # ドキュメントを保存して閉じる
-        $doc.Close([ref]$SaveOption::wdSaveChanges)
-
+        # $doc.Close($SaveOption::wdSaveChanges)
+        $doc.Save()
+        $doc.Close()
         $word.Quit()
         Write-Host "OUT: Create_Property"
     }
@@ -353,8 +360,8 @@ $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
 # メソッドの呼び出し例
 $wordDoc.Check_PC_Env()
 $wordDoc.Check_Word_Library()
-$wordDoc.Check_Custom_Property()
-$wordDoc.Create_Property("NewProp", "NewValue")
+# $wordDoc.Check_Custom_Property()
+$wordDoc.Create_Property("NewProp2", "NewValue2")
 $propValue = $wordDoc.Read_Property("NewProp")
 $wordDoc.Update_Property("NewProp", "UpdatedValue")
 $wordDoc.Delete_Property("NewProp")

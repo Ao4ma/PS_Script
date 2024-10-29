@@ -75,7 +75,8 @@ class WordDocument {
         }
 
         # ドキュメントを保存せずに閉じる
-        $doc.Close([ref]$SaveOption::wdDoNotSaveChanges)
+        # $doc.Close($SaveOption)
+        $doc.Close()
         [System.Runtime.InteropServices.Marshal]::ReleaseComObject($customProps) | Out-Null
         [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null
         Remove-Variable -Name doc, customProps
@@ -89,34 +90,62 @@ class WordDocument {
         Write-Host "Exiting Check_Custom_Property"
     }
 
-    [void] Set_Custom_Property([string]$PropertyName, [string]$Value, [System.__ComObject]$Document) {
+
+    [void] Set_Custom_Property([string]$PropertyName, [string]$Value) {
         Write-Host "IN: Set_Custom_Property"
+        $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
+        $word = New-Object -ComObject Word.Application
+        $doc = $word.Documents.Open($docPath)
         try {
-            $customProperties = $Document.CustomDocumentProperties
+            $customProperties = $doc.CustomDocumentProperties
             $binding = "System.Reflection.BindingFlags" -as [type]
             [array]$arrayArgs = $PropertyName, $false, 4, $Value
             try {
-                [System.__ComObject].InvokeMember("add", $binding::InvokeMethod, $null, $customProperties, $arrayArgs) | Out-Null
+                [System.__ComObject].InvokeMember("add", $binding::InvokeMethod, $null, $customProperties, $arrayArgs) 
+                Out-Null
             } catch [system.exception] {
                 $propertyObject = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProperties, $PropertyName)
                 [System.__ComObject].InvokeMember("Delete", $binding::InvokeMethod, $null, $propertyObject, $null)
-                [System.__ComObject].InvokeMember("add", $binding::InvokeMethod, $null, $customProperties, $arrayArgs) | Out-Null
+                [System.__ComObject].InvokeMember("add", $binding::InvokeMethod, $null, $customProperties, $arrayArgs) 
+                Out-Null
             }
             Write-Host "Property '$PropertyName' set to '$Value'."
+            # ドキュメントを保存
+            $doc.Save()
         } catch {
             Write-Host "Failed to set property '$PropertyName': $_" -ForegroundColor Red
         }
+        $doc.Close()
+        $word.Quit()
         Write-Host "OUT: Set_Custom_Property"
     }
 
+
+
     [void] Create_Property([string]$propName, [string]$propValue) {
         Write-Host "IN: Create_Property"
+
+        # 必要なアセンブリをロード
+        # Add-Type -AssemblyName "Microsoft.Office.Interop.Word"
+        #$libraryPath = "C:\Windows\assembly\GAC_MSIL\Microsoft.Office.Interop.Word\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.Word.dll"
+        #Add-Type -Path $libraryPath       
+        #[ref]$SaveOption = "Microsoft.Office.Interop.Word.WdSaveOptions" -as [type]
+
+        # WdSaveOptions 型を取得
+        # $SaveOption = [type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
+        #Write-Host "SaveOption: [ref]$SaveOption"
+
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $word = New-Object -ComObject Word.Application
         $doc = $word.Documents.Open($docPath)
         $customProps = $doc.CustomDocumentProperties
         $binding = "System.Reflection.BindingFlags" -as [type]
-        [array]$arrayArgs = $propName, $false, 4, $propValue
+        [array]$arrayArgs = $PropName,$false, 4, $propValue
+    
+        # 値を確認
+        Write-Host "CustomDocumentProperties: $customProps"
+        Write-Host "PropName: $propName"
+        Write-Host "PropValue: $propValue"
     
         if ($null -eq $customProps) {
             Write-Host -ForegroundColor Red "CustomDocumentProperties is null. Cannot add property."
@@ -127,7 +156,7 @@ class WordDocument {
         }
     
         try {
-            [System.__ComObject].InvokeMember("add", $binding::InvokeMethod, $null, $customProps, $arrayArgs) | Out-Null
+            [System.__ComObject].InvokeMember("add", $binding::InvokeMethod,$null,$customProps,$arrayArgs) | out-null
         } catch {
             Write-Host -ForegroundColor Red "Failed to add property '$propName': $_"
             try {
@@ -140,11 +169,13 @@ class WordDocument {
         }
     
         # ドキュメントを保存して閉じる
+        # $doc.Close($SaveOption::wdSaveChanges)
         $doc.Save()
         $doc.Close()
         $word.Quit()
         Write-Host "OUT: Create_Property"
     }
+
 
     [string] Read_Property([string]$propName) {
         Write-Host "IN: Read_Property"
@@ -302,7 +333,7 @@ class WordDocument {
 
         # ドキュメントを保存せずに閉じる
         [ref]$SaveOption = "Microsoft.Office.Interop.Word.WdSaveOptions" -as [type]
-        $doc.Close([ref]$SaveOption::wdDoNotSaveChanges)
+        $doc.Close($SaveOption)
         [System.Runtime.InteropServices.Marshal]::ReleaseComObject($Properties) | Out-Null
         [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null
         Remove-Variable -Name doc, Properties
@@ -359,23 +390,10 @@ $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
 # メソッドの呼び出し例
 $wordDoc.Check_PC_Env()
 $wordDoc.Check_Word_Library()
-#$wordDoc.Check_Custom_Property()
-#$wordDoc.Create_Property("NewProp2", "NewValue2")
-#$propValue = $wordDoc.Read_Property("NewProp")
-#$wordDoc.Update_Property("NewProp", "UpdatedValue")
-#$wordDoc.Delete_Property("NewProp")
-#$properties = $wordDoc.Get_Properties("Both")
-
-# Set_Custom_Property メソッドの呼び出し例
-$docPath = Join-Path -Path $DocFilePath -ChildPath $DocFileName
-$word = New-Object -ComObject Word.Application
-$doc = $word.Documents.Open($docPath)
-$wordDoc.Set_Custom_Property("CustomProp", "CustomValue", $doc)
-$doc.Save()
-$doc.Close()
-$word.Quit()
-[System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null
-[System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null
-Remove-Variable -Name doc, word
-[gc]::collect()
-[gc]::WaitForPendingFinalizers()
+# $wordDoc.Check_Custom_Property()
+$wordDoc.Set_Custom_Property("NewProp2A", "NewValue2A")
+$wordDoc.Create_Property("NewProp2", "NewValue2")
+$propValue = $wordDoc.Read_Property("NewProp")
+$wordDoc.Update_Property("NewProp", "UpdatedValue")
+$wordDoc.Delete_Property("NewProp")
+$properties = $wordDoc.Get_Properties("Both")
