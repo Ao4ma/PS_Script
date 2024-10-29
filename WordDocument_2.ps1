@@ -62,8 +62,16 @@ class WordDocument {
                     Write-Host "Failed to get property name: $_" -ForegroundColor Red
                 }
             }
+        }
 
-            $customPropsList | Out-File -FilePath (Join-Path -Path $this.ScriptRoot -ChildPath "custom_properties.txt")
+        $outputFilePath = Join-Path -Path $this.ScriptRoot -ChildPath "custom_properties.txt"
+        if ($customPropsList.Count -eq 0) {
+            Write-Host "No custom properties found. Deleting previous output file if it exists."
+            if (Test-Path $outputFilePath) {
+                Remove-Item $outputFilePath
+            }
+        } else {
+            $customPropsList | Out-File -FilePath $outputFilePath
         }
 
         # ドキュメントを保存せずに閉じる
@@ -80,6 +88,7 @@ class WordDocument {
 
         Write-Host "Exiting Check_Custom_Property"
     }
+
 
     [void] Create_Property([string]$propName, [string]$propValue) {
         Write-Host "IN: Create_Property"
@@ -123,6 +132,7 @@ class WordDocument {
         Write-Host "OUT: Create_Property"
     }
 
+    
     [string] Read_Property([string]$propName) {
         Write-Host "IN: Read_Property"
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
