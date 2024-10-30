@@ -51,8 +51,8 @@ class WordDocument {
 $wordDoc = [WordDocument]::new()
 
 # メソッドの呼び出し例
-# $docPath = "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\技100-999.docx"
-$docPath = "D:\\GitHub\\PS_Script\\技100-999.docx"
+$docPath = "C:\\Users\\y0927\\Documents\\GitHub\\PS_Script\\技100-999.docx"
+# $docPath = "D:\\GitHub\\PS_Script\\技100-999.docx"
 
 if (-Not (Test-Path $docPath)) {
     Write-Host "File not found: $docPath" -ForegroundColor Red
@@ -63,7 +63,8 @@ $doc = $word.Documents.Open($docPath)
 $wordDoc.Set_Custom_Property("CustomPropT", "CustomValueT", $doc)
 try {
     $timestamp = Get-Date -Format "yyyyMMddHHmmss"
-    $newDocPath = $docPath -replace '\.docx$', "_$timestamp.docx"
+    # $newDocPath = $docPath -replace '\.docx$', "_$timestamp.docx"
+    $newDocPath = $docPath
     $doc.SaveAs([ref]$newDocPath)
     $doc.Close()
     $word.Quit()
@@ -76,8 +77,8 @@ try {
     [gc]::WaitForPendingFinalizers()
     
     # 元のファイルを削除して新しいファイルをリネーム
-    Remove-Item -Path $docPath
-    Rename-Item -Path $newDocPath -NewName $docPath
+    # Remove-Item -Path $docPath
+    # Rename-Item -Path $newDocPath -NewName $docPath
 } catch {
     Write-Host "Failed to save document: $_" -ForegroundColor Red
 }
