@@ -86,36 +86,23 @@ class WordDocument {
     # ドキュメントを別名で保存するメソッド
     [void] SaveDocumentWithBackup() {
         try {
-            # $timestamp = Get-Date -Format "yyyyMMddHHmmss"
-            # $newDocPath = $this.Document.FullName -replace '\.docx$', "_$timestamp.docx"
-            $newDocPath = $this.Document.FullName
+            $timestamp = Get-Date -Format "yyyyMMddHHmmss"
+            $newDocPath = $this.Document.FullName -replace '\.docx$', "_$timestamp.docx"
+            # $newDocPath = $this.Document.FullName
             $this.Document.SaveAs([ref]$newDocPath)
 
+            # Close the document and release the COM objects
+            $this.Close_Document()
+
             # 元のファイルを削除して新しいファイルをリネーム
-            # $docPath = $this.Document.FullName
-            # Remove-Item -Path $docPath
-            # Rename-Item -Path $newDocPath -NewName $docPath
+            $docPath = $this.Document.FullName
+            Remove-Item -Path $docPath
+            Rename-Item -Path $newDocPath -NewName $docPath
         } catch {
             Write-Host "Failed to save document: $($_)" -ForegroundColor Red
         }
     }
 
-        # ドキュメントを別名で保存するメソッド
-        [void] SaveDocumentWithBackup2([String]$docFilePath) {
-            try {
-                # $timestamp = Get-Date -Format "yyyyMMddHHmmss"
-                # $newDocPath = $this.Document.FullName -replace '\.docx$', "_$timestamp.docx"
-                $newDocPath = $docFilePath.FullName
-                $this.Document.SaveAs([ref]$newDocPath)
-    
-                # 元のファイルを削除して新しいファイルをリネーム
-                # $docPath = $this.Document.FullName
-                # Remove-Item -Path $docPath
-                # Rename-Item -Path $newDocPath -NewName $docPath
-            } catch {
-                Write-Host "Failed to save document: $($_)" -ForegroundColor Red
-            }
-        }
 
     # PC環境をチェックするメソッド
     [void] Check_PC_Env() {
@@ -189,6 +176,8 @@ class WordDocument {
     # カスタムプロパティを作成するメソッド
     [void] Create_Property([string]$propName, [string]$propValue) {
         Write-Host "IN: Create_Property"
+        $this.Open_Document()
+
         $customProps = $this.Document.CustomDocumentProperties
         if ($this.CheckNull($customProps, "CustomDocumentProperties is null. Cannot add property.")) {
             Write-Host "OUT: Create_Property"
@@ -197,8 +186,7 @@ class WordDocument {
 
         [array]$arrayArgs = $propName, $false, 4, $propValue
         $this.InvokeComObjectMember($customProps, "Add", "InvokeMethod", $arrayArgs)
-        # $this.SaveDocumentWithBackup()
-        $this.SaveDocumentWithBackup2($this.DocFilePath)
+        $this.SaveDocumentWithBackup()
         Write-Host "OUT: Create_Property"
     }
 
