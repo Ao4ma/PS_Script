@@ -21,38 +21,24 @@ class WordDocument {
 
     # ドキュメントを閉じるメソッド
     [void] Close_Document() {
-        Write-Host "IN: Close_Document"
         if ($null -ne $this.Document) {
-            Write-Host "Closing document..."
             # Ensure $SaveOption is assigned
             $SaveOption = [System.Type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
             $this.Document.Close([ref]$SaveOption::wdDoNotSaveChanges)
             [System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.Document) | Out-Null
-            Remove-Variable -Name Document
-            Write-Host "Document closed and COM object released."
+            if (Get-Variable -Name Document -ErrorAction SilentlyContinue) {
+                Remove-Variable -Name Document
+            }
         }
         if ($null -ne $this.WordApp) {
-            Write-Host "Quitting Word application..."
             $this.WordApp.Quit()
             [System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.WordApp) | Out-Null
-            Remove-Variable -Name WordApp
-            Write-Host "Word application quit and COM object released."
+            if (Get-Variable -Name WordApp -ErrorAction SilentlyContinue) {
+                Remove-Variable -Name WordApp
+            }
         }
-        Write-Host "Running garbage collection..."
         [gc]::collect()
         [gc]::WaitForPendingFinalizers()
-        Write-Host "Garbage collection completed. COM objects should be released."
-
-        # 確認のためにコマンドを実行
-        Write-Host "Checking if COM objects are released..."
-        $comObjectsReleased = $false
-        while (-not $comObjectsReleased) {
-            Start-Sleep -Seconds 1
-            $comObjectsReleased = -not (Get-Process -Name WINWORD -ErrorAction SilentlyContinue)
-            Write-Host "Waiting for COM objects to be released..."
-        }
-        Write-Host "COM objects have been released."
-        Write-Host "OUT: Close_Document"
     }
 
     # COMオブジェクトのメンバーを呼び出すメソッド
@@ -89,38 +75,75 @@ class WordDocument {
         return $false
     }
 
-    # ファイルに内容を書き込むメソッド
-    [void] WriteToFile([string]$FilePath, [array]$Content) {
-        if ($Content.Count -eq 0) {
-            Write-Host "No content found. Deleting previous output file if it exists."
-            if (Test-Path $FilePath) {
-                Remove-Item $FilePath
-            }
-        } else {
-            $Content | Out-File -FilePath $FilePath
-        }
-    }
-
     # ドキュメントを別名で保存するメソッド
     [void] SaveDocumentWithBackup() {
         try {
+            if ($null -eq $this.Document.FullName) {
+                throw "Document path is null. Cannot save document."
+            }
+
             $timestamp = Get-Date -Format "yyyyMMddHHmmss"
             $newDocPath = $this.Document.FullName -replace '\.docx$', "_$timestamp.docx"
-            # $newDocPath = $this.Document.FullName
             $this.Document.SaveAs([ref]$newDocPath)
 
+            # デバッグ用メッセージ
+            Write-Host "Document saved as: $newDocPath"
+
+            # 保存直後にファイルの存在を確認
+            $retryCount = 5
+            $retryInterval = 2 # seconds
+            for ($i = 0; $i -lt $retryCount; $i++) {
+                if (Test-Path -Path $newDocPath) {
+                    Write-Host "New document path exists: $newDocPath"
+                    break
+                } else {
+                    Write-Host "Retry $($i + 1)/$($retryCount): New document path '$newDocPath' does not exist immediately after save. Retrying..."
+                    Start-Sleep -Seconds $retryInterval
+                }
+            }
+
+            if (-not (Test-Path -Path $newDocPath)) {
+                throw "New document path '$newDocPath' does not exist after $retryCount retries. Save operation failed."
+            }
+
             # Close the document and release the COM objects
+            $originalDocPath = $this.Document.FullName
             $this.Close_Document()
 
-            # 元のファイルを削除して新しいファイルをリネーム
-            $docPath = $this.Document.FullName
-            Remove-Item -Path $docPath
-            Rename-Item -Path $newDocPath -NewName $docPath
+            # リトライ設定
+            $retryCount = 5
+            $retryInterval = 2 # seconds
+
+            # ファイルの存在を確認し、リトライ
+            for ($i = 0; $i -lt $retryCount; $i++) {
+                if (Test-Path -Path $newDocPath) {
+                    Write-Host "New document path exists: $newDocPath"
+                    Remove-Item -Path $originalDocPath
+                    Start-Sleep -Seconds 1 # 少し待機してからリネーム
+                    if (Test-Path -Path $newDocPath) {
+                        Rename-Item -Path $newDocPath -NewName $originalDocPath
+                        Write-Host "Document renamed successfully."
+                        return
+                    } else {
+                        Write-Host "Retry $($i + 1)/$($retryCount): New document path '$newDocPath' does not exist after waiting. Retrying..."
+                        Start-Sleep -Seconds $retryInterval
+                    }
+                } else {
+                    Write-Host "Retry $($i + 1)/$($retryCount): New document path '$newDocPath' does not exist. Retrying..."
+                    Start-Sleep -Seconds $retryInterval
+                }
+            }
+
+            throw "New document path '$newDocPath' does not exist after $retryCount retries. Rename operation failed."
         } catch {
             Write-Host "Failed to save document: $($_)" -ForegroundColor Red
         }
     }
 
+    # ファイルに書き込むメソッド
+    [void] WriteToFile([string]$filePath, [string]$content) {
+        Set-Content -Path $filePath -Value $content
+    }
 
     # PC環境をチェックするメソッド
     [void] Check_PC_Env() {
@@ -194,7 +217,12 @@ class WordDocument {
     # カスタムプロパティを作成するメソッド
     [void] Create_Property([string]$propName, [string]$propValue) {
         Write-Host "IN: Create_Property"
-#        $this.Open_Document()
+
+        # ドキュメントが開かれているか確認
+        if ($null -eq $this.Document) {
+            Write-Host "Document is not open. Opening document..."
+            $this.Open_Document()
+        }
 
         $customProps = $this.Document.CustomDocumentProperties
         if ($this.CheckNull($customProps, "CustomDocumentProperties is null. Cannot add property.")) {
