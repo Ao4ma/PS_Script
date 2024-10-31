@@ -4,6 +4,7 @@ class WordDocument {
     [string]$ScriptRoot
     [object]$WordApp
     [object]$Document
+    [hashtable]$BuiltinPropertiesGroup
 
     WordDocument([string]$docFileName, [string]$docFilePath, [string]$scriptRoot) {
         $this.DocFileName = $docFileName
@@ -17,62 +18,26 @@ class WordDocument {
         $this.WordApp = New-Object -ComObject Word.Application
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
         $this.Document = $this.WordApp.Documents.Open($docPath)
+        if ($null -eq $this.Document) {
+            throw "Failed to open document: $docPath"
+        }
     }
 
     # ドキュメントを閉じるメソッド
     [void] Close_Document() {
+        Write-Host "IN: Close_Document"
         if ($null -ne $this.Document) {
-            # Ensure $SaveOption is assigned
-            $SaveOption = [System.Type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
-            $this.Document.Close([ref]$SaveOption::wdDoNotSaveChanges)
-            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.Document) | Out-Null
-            if (Get-Variable -Name Document -ErrorAction SilentlyContinue) {
-                Remove-Variable -Name Document
-            }
+            $this.Document.Close()
+            $this.Document = $null
         }
         if ($null -ne $this.WordApp) {
             $this.WordApp.Quit()
-            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.WordApp) | Out-Null
-            if (Get-Variable -Name WordApp -ErrorAction SilentlyContinue) {
-                Remove-Variable -Name WordApp
-            }
+            [System.Runtime.Interopservices.Marshal]::ReleaseComObject($this.WordApp) | Out-Null
+            $this.WordApp = $null
         }
         [gc]::collect()
         [gc]::WaitForPendingFinalizers()
-    }
-
-    # COMオブジェクトのメンバーを呼び出すメソッド
-    [object] InvokeComObjectMember([object]$ComObject, [string]$MemberName, [string]$Action, [array]$Parameters = @()) {
-        $binding = "System.Reflection.BindingFlags" -as [type]
-        try {
-            if ($Action -eq "GetProperty") {
-                return [System.__ComObject].InvokeMember($MemberName, $binding::GetProperty, $null, $ComObject, $Parameters)
-            } elseif ($Action -eq "SetProperty") {
-                [System.__ComObject].InvokeMember($MemberName, $binding::SetProperty, $null, $ComObject, $Parameters) | Out-Null
-                return $null
-            } elseif ($Action -eq "InvokeMethod") {
-                [System.__ComObject].InvokeMember($MemberName, $binding::InvokeMethod, $null, $ComObject, @($Parameters)) | Out-Null
-                return $null
-            }
-        } catch [System.Exception] {
-            Write-Host -ForegroundColor Red "Failed to $($Action) $($MemberName): $(($_.Exception).Message)"
-            return $null
-        }
-        return $null
-    }
-
-    # ドキュメントプロパティを取得するメソッド
-    [object] GetDocumentProperty([object]$Properties, [string]$PropertyName) {
-        return $this.InvokeComObjectMember($Properties, "Item", "GetProperty", @($PropertyName))
-    }
-
-    # オブジェクトがnullかどうかをチェックするメソッド
-    [bool] CheckNull([object]$Object, [string]$ErrorMessage) {
-        if ($null -eq $Object) {
-            Write-Host -ForegroundColor Red $ErrorMessage
-            return $true
-        }
-        return $false
+        Write-Host "OUT: Close_Document"
     }
 
     # ドキュメントを別名で保存するメソッド
@@ -97,13 +62,13 @@ class WordDocument {
                     Write-Host "New document path exists: $newDocPath"
                     break
                 } else {
-                    Write-Host "Retry $($i + 1)/$($retryCount): New document path '$newDocPath' does not exist immediately after save. Retrying..."
+                    Write-Host "Retry $($i + 1)/${retryCount}: New document path '$newDocPath' does not exist immediately after save. Retrying..."
                     Start-Sleep -Seconds $retryInterval
                 }
             }
 
             if (-not (Test-Path -Path $newDocPath)) {
-                throw "New document path '$newDocPath' does not exist after $retryCount retries. Save operation failed."
+                throw "New document path '$newDocPath' does not exist after ${retryCount} retries. Save operation failed."
             }
 
             # Close the document and release the COM objects
@@ -125,16 +90,16 @@ class WordDocument {
                         Write-Host "Document renamed successfully."
                         return
                     } else {
-                        Write-Host "Retry $($i + 1)/$($retryCount): New document path '$newDocPath' does not exist after waiting. Retrying..."
+                        Write-Host "Retry $($i + 1)/${retryCount}: New document path '$newDocPath' does not exist after waiting. Retrying..."
                         Start-Sleep -Seconds $retryInterval
                     }
                 } else {
-                    Write-Host "Retry $($i + 1)/$($retryCount): New document path '$newDocPath' does not exist. Retrying..."
+                    Write-Host "Retry $($i + 1)/${retryCount}: New document path '$newDocPath' does not exist. Retrying..."
                     Start-Sleep -Seconds $retryInterval
                 }
             }
 
-            throw "New document path '$newDocPath' does not exist after $retryCount retries. Rename operation failed."
+            throw "New document path '$newDocPath' does not exist after ${retryCount} retries. Rename operation failed."
         } catch {
             Write-Host "Failed to save document: $($_)" -ForegroundColor Red
         }
@@ -143,6 +108,39 @@ class WordDocument {
     # ファイルに書き込むメソッド
     [void] WriteToFile([string]$filePath, [string]$content) {
         Set-Content -Path $filePath -Value $content
+    }
+
+    # Nullチェックメソッド
+    [bool] CheckNull([object]$obj, [string]$message) {
+        if ($null -eq $obj) {
+            Write-Host $message -ForegroundColor Red
+            return $true
+        }
+        return $false
+    }
+
+    # カスタムプロパティを取得するメソッド
+    [object] GetDocumentProperty([object]$properties, [string]$propertyName) {
+        foreach ($property in $properties) {
+            if ($property.Name -eq $propertyName) {
+                return $property
+            }
+        }
+        return $null
+    }
+
+    # COMオブジェクトのメンバーを呼び出すメソッド
+    [object] InvokeComObjectMember([object]$comObject, [string]$memberName, [string]$memberType, [object[]]$args) {
+        if ($null -eq $comObject) {
+            throw "COM object is null. Cannot invoke member."
+        }
+        $bindingFlags = [System.Reflection.BindingFlags]::InvokeMethod
+        if ($memberType -eq "GetProperty") {
+            $bindingFlags = [System.Reflection.BindingFlags]::GetProperty
+        } elseif ($memberType -eq "SetProperty") {
+            $bindingFlags = [System.Reflection.BindingFlags]::SetProperty
+        }
+        return $comObject.GetType().InvokeMember($memberName, $bindingFlags, $null, $comObject, $args)
     }
 
     # PC環境をチェックするメソッド
@@ -164,7 +162,6 @@ class WordDocument {
 
         Write-Host "OUT: Check_PC_Env"
     }
-    
 
     # Wordライブラリをチェックするメソッド
     [void] Check_Word_Library() {
@@ -172,14 +169,12 @@ class WordDocument {
         $libraryPath = "C:\Windows\assembly\GAC_MSIL\Microsoft.Office.Interop.Word\15.0.0.0__71e9bce111e9429c\Microsoft.Office.Interop.Word.dll"
         if (Test-Path $libraryPath) {
             Add-Type -Path $libraryPath
-            # $SaveOption = [System.Type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
             Write-Host "Word library found at $($libraryPath)"
         } else {
             Write-Host "Word library not found at $($libraryPath). Searching the entire system..."
             $libraryPath = Get-ChildItem -Path "C:\" -Recurse -Filter "Microsoft.Office.Interop.Word.dll" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
             if ($libraryPath) {
                 Add-Type -Path $libraryPath
-                # $SaveOption = [System.Type]::GetType("Microsoft.Office.Interop.Word.WdSaveOptions")
                 Write-Host "Word library found at $($libraryPath)"
             } else {
                 Write-Host -ForegroundColor Red "Word library not found on this system."
@@ -188,7 +183,6 @@ class WordDocument {
         }
         Write-Host "OUT: Check_Word_Library"
     }
-
 
     # カスタムプロパティをチェックするメソッド
     [void] Check_Custom_Property() {
@@ -220,13 +214,11 @@ class WordDocument {
 
         # ドキュメントが開かれているか確認
         if ($null -eq $this.Document) {
-            Write-Host "Document is not open. Opening document..."
-            $this.Open_Document()
+            throw "Document is not open. Cannot create property."
         }
 
         $customProps = $this.Document.CustomDocumentProperties
         if ($this.CheckNull($customProps, "CustomDocumentProperties is null. Cannot add property.")) {
-            Write-Host "OUT: Create_Property"
             return
         }
 
@@ -386,13 +378,9 @@ $wordDoc.Create_Property("清水", "エスパルス")
 $wordDoc.Check_Custom_Property()
 $propValue = $wordDoc.Read_Property("NewProp")
 $wordDoc.Update_Property("NewProp", "UpdatedValue")
-
 $wordDoc.Delete_Property("NewProp")
-$properties = $wordDoc.Get_Properties("Both")
 
 # ドキュメントを閉じる
 $wordDoc.Close_Document()
 
 # Get-Process -Name WINWORD | Stop-Process -Force
-# $word = New-Object -ComObject Word.Application
-# $doc = $word.Documents.Open($docPath)
