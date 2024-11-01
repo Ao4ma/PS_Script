@@ -14,23 +14,29 @@ class WordDocument {
         $this.Document = $this.WordApp.Documents.Open($docPath)
     }
 
-    # カスタムプロパティを設定するメソッド
-    [void] SetCustomProperty([string]$PropertyName, [string]$Value) {
-        Write-Host "SetCustomProperty: In"
-        $customProperties = $this.Document.CustomDocumentProperties
-        $binding = "System.Reflection.BindingFlags" -as [type]
-        [array]$arrayArgs = $PropertyName, $false, 4, $Value
+
+# カスタムプロパティを設定するメソッド
+[void] SetCustomProperty([string]$PropertyName, [string]$Value) {
+    Write-Host "SetCustomProperty: In"
+    $customProperties = $this.Document.CustomDocumentProperties
+    $binding = "System.Reflection.BindingFlags" -as [type]
+    [array]$arrayArgs = $PropertyName, $false, 4, $Value
+    try {
+        [System.__ComObject].InvokeMember("Add", $binding::InvokeMethod, $null, $customProperties, $arrayArgs) | Out-Null
+        Write-Host "SetCustomProperty: Out"
+    } catch [system.exception] {
         try {
-            [System.__ComObject].InvokeMember("Add", $binding::InvokeMethod, $null, $customProperties, $arrayArgs) | Out-Null
-            Write-Host "SetCustomProperty: Out"
-        } catch [system.exception] {
+            # プロパティが既に存在している場合の処理
             $propertyObject = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProperties, $PropertyName)
             [System.__ComObject].InvokeMember("Delete", $binding::InvokeMethod, $null, $propertyObject, $null)
             [System.__ComObject].InvokeMember("Add", $binding::InvokeMethod, $null, $customProperties, $arrayArgs) | Out-Null
-            # Write-Error "Error SetCustomProperty: $_"
-            # throw $_
+            Write-Host "SetCustomProperty: Out (after delete)"
+        } catch {
+            Write-Error "Error in SetCustomProperty (inner catch): $_"
+            throw $_
         }
     }
+}
 
     # ドキュメントを別名で保存するメソッド
     [void] SaveAs([string]$NewFilePath) {
@@ -128,7 +134,12 @@ class WordDocument {
     # カスタムプロパティをチェックするメソッド
     [void] Check_Custom_Property() {
         Write-Host "Entering Check_Custom_Property"
-        $customProps = $this.Document.CustomDocumentProperties
+        if ($null -eq $this.Document) {
+            Write-Host "Document is null"
+        } else {
+            $customProps = $this.Document.CustomDocumentProperties
+        }
+            $customProps = $this.Document.CustomDocumentProperties
         if ($this.CheckNull($customProps, "customProps is null")) {
             Write-Host "Exiting Check_Custom_Property"
             return
@@ -324,7 +335,7 @@ $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
 $wordDoc.Check_PC_Env()
 $wordDoc.Check_Word_Library()
 $wordDoc.Check_Custom_Property()
-$wordDoc.SetCustomPropertyAndSaveAs("CustomProperty2", "Value2", "C:\Users\y0927\Documents\GitHub\PS_Script\sample_temp.docx")
+$wordDoc.SetCustomPropertyAndSaveAs("CustomProperty21", "Value21", "C:\Users\y0927\Documents\GitHub\PS_Script\sample_temp.docx")
 $wordDoc.Check_Custom_Property()
 # カスタムプロパティを読み取る
 $propValue = $wordDoc.Read_Property("CustomProperty2")
