@@ -1,9 +1,13 @@
 # ImportModules.ps1
-using module "$PSScriptRoot\MyLibrary\WordDocument.psm1"
-using module "$PSScriptRoot\MyLibrary\WordDocumentProperties.psm1"
-using module "$PSScriptRoot\MyLibrary\WordDocumentUtilities.psm1"
-using module "$PSScriptRoot\MyLibrary\WordDocumentSignatures.psm1"
-using module "$PSScriptRoot\MyLibrary\WordDocumentChecks.psm1"
+
+# ここで直接パスを指定します
+using module ".\MyLibrary\WordDocumentProperties.psm1"
+using module ".\MyLibrary\WordDocumentUtilities.psm1"
+using module ".\MyLibrary\WordDocumentSignatures.psm1"
+using module ".\MyLibrary\WordDocumentChecks.psm1"
+using module ".\MyLibrary\WordDocument.psm1"
+
+$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 # デバッグ用設定
 $DocFileName = "技100-999.docx"
@@ -18,40 +22,136 @@ if (Test-Path $ScriptRoot2) {
 }
 $DocFilePath = $ScriptRoot
 
+Write-Host "Creating WordDocument instance..."
 # WordDocumentクラスのインスタンスを作成
-$wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+try {
+    $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+    Write-Host "WordDocument instance created successfully."
+} catch {
+    Write-Error "Failed to create WordDocument instance: $_"
+    exit 1
+}
 
+Write-Host "Calling Check_PC_Env..."
 # メソッドの呼び出し例
-$wordDoc.Check_PC_Env()
-$wordDoc.Check_Word_Library()
-$wordDoc.Check_Custom_Property()
-$wordDoc.SetCustomPropertyAndSaveAs("CustomProperty21", "Value21", "C:\Users\y0927\Documents\GitHub\PS_Script\sample_temp.docx")
+try {
+    Check_PC_Env $wordDoc
+    Write-Host "Check_PC_Env completed successfully."
+} catch {
+    Write-Error "Check_PC_Env failed: $_"
+}
 
-# サイン欄に名前と日付を配置
-$wordDoc.FillSignatures()
+Write-Host "Calling Check_Word_Library..."
+try {
+    Check_Word_Library $wordDoc
+    Write-Host "Check_Word_Library completed successfully."
+} catch {
+    Write-Error "Check_Word_Library failed: $_"
+}
 
-# カスタムプロパティを読み取る
-$propValue = $wordDoc.Read_Property("CustomProperty2")
-Write-Host "Read Property Value: $propValue"
+Write-Host "Calling Check_Custom_Property..."
+try {
+    Check_Custom_Property $wordDoc
+    Write-Host "Check_Custom_Property completed successfully."
+} catch {
+    Write-Error "Check_Custom_Property failed: $_"
+}
 
-# カスタムプロパティを更新する
-$wordDoc.Update_Property("CustomProperty2", "UpdatedValue")
+Write-Host "Calling SetCustomProperty..."
+try {
+    SetCustomProperty $wordDoc "CustomProperty21" "Value21"
+    Write-Host "SetCustomProperty completed successfully."
+} catch {
+    Write-Error "SetCustomProperty failed: $_"
+}
 
-# カスタムプロパティを削除する
-$wordDoc.Delete_Property("CustomProperty2")
+Write-Host "Calling SaveAs..."
+try {
+    SaveAs $wordDoc "$scriptRoot\sample_temp.docx"
+    Write-Host "SaveAs completed successfully."
+} catch {
+    Write-Error "SaveAs failed: $_"
+}
 
-# ドキュメントを閉じる
-$wordDoc.Close()
+Write-Host "Calling FillSignatures..."
+try {
+    # サイン欄に名前と日付を配置
+    FillSignatures $wordDoc
+    Write-Host "FillSignatures completed successfully."
+} catch {
+    Write-Error "FillSignatures failed: $_"
+}
 
-# Wordプロセスを閉じる
-$wordDoc.Close_Word_Processes()
+Write-Host "Calling Read_Property..."
+try {
+    # カスタムプロパティを読み取る
+    $propValue = Read_Property $wordDoc "CustomProperty2"
+    Write-Host "Read Property Value: $propValue"
+} catch {
+    Write-Error "Read_Property failed: $_"
+}
 
-# Wordが閉じられていることを確認する
-$wordDoc.Ensure_Word_Closed()
+Write-Host "Calling Update_Property..."
+try {
+    # カスタムプロパティを更新する
+    Update_Property $wordDoc "CustomProperty2" "UpdatedValue"
+    Write-Host "Update_Property completed successfully."
+} catch {
+    Write-Error "Update_Property failed: $_"
+}
 
-# ファイルに出力
-$wordDoc.WriteToFile("C:\path\to\output.txt", @("Line 1", "Line 2"))
+Write-Host "Calling Delete_Property..."
+try {
+    # カスタムプロパティを削除する
+    Delete_Property $wordDoc "CustomProperty2"
+    Write-Host "Delete_Property completed successfully."
+} catch {
+    Write-Error "Delete_Property failed: $_"
+}
 
-# プロパティを取得する
-$properties = $wordDoc.Get_Properties("Custom")
-Write-Host "Properties: $properties"
+Write-Host "Calling Close..."
+try {
+    # ドキュメントを閉じる
+    Close $wordDoc
+    Write-Host "Close completed successfully."
+} catch {
+    Write-Error "Close failed: $_"
+}
+
+Write-Host "Calling Close_Word_Processes..."
+try {
+    # Wordプロセスを閉じる
+    Close_Word_Processes $wordDoc
+    Write-Host "Close_Word_Processes completed successfully."
+} catch {
+    Write-Error "Close_Word_Processes failed: $_"
+}
+
+Write-Host "Calling Ensure_Word_Closed..."
+try {
+    # Wordが閉じられていることを確認する
+    Ensure_Word_Closed $wordDoc
+    Write-Host "Ensure_Word_Closed completed successfully."
+} catch {
+    Write-Error "Ensure_Word_Closed failed: $_"
+}
+
+Write-Host "Calling WriteToFile..."
+try {
+    # ファイルに出力
+    WriteToFile $wordDoc "$scriptRoot\output.txt" @("Line 1", "Line 2")
+    Write-Host "WriteToFile completed successfully."
+} catch {
+    Write-Error "WriteToFile failed: $_"
+}
+
+Write-Host "Calling Get_Properties..."
+try {
+    # プロパティを取得する
+    $properties = Get_Properties $wordDoc "Custom"
+    Write-Host "Properties: $properties"
+} catch {
+    Write-Error "Get_Properties failed: $_"
+}
+
+Write-Host "Script completed successfully."

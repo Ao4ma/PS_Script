@@ -1,6 +1,6 @@
 # MyLibrary/WordDocumentProperties.psm1
-# カスタムプロパティを設定するメソッド
-[void] SetCustomProperty([string]$PropertyName, [string]$Value) {
+function SetCustomProperty {
+    param ($this, $PropertyName, $Value)
     Write-Host "SetCustomProperty: In"
     $customProperties = $this.Document.CustomDocumentProperties
     $binding = "System.Reflection.BindingFlags" -as [type]
@@ -22,8 +22,8 @@
     }
 }
 
-# カスタムプロパティを読み取るメソッド
-[string] Read_Property([string]$propName) {
+function Read_Property {
+    param ($this, $propName)
     Write-Host "IN: Read_Property"
     $customProps = $this.Document.CustomDocumentProperties
     if ($this.CheckNull($customProps, "CustomDocumentProperties is null. Cannot read property.")) {
@@ -43,8 +43,8 @@
     return $propValue
 }
 
-# カスタムプロパティを更新するメソッド
-[void] Update_Property([string]$propName, [string]$propValue) {
+function Update_Property {
+    param ($this, $propName, $propValue)
     Write-Host "IN: Update_Property"
     $customProps = $this.Document.CustomDocumentProperties
     if ($this.CheckNull($customProps, "CustomDocumentProperties is null. Cannot update property.")) {
@@ -72,8 +72,8 @@
     Write-Host "OUT: Update_Property"
 }
 
-# カスタムプロパティを削除するメソッド
-[void] Delete_Property([string]$propName) {
+function Delete_Property {
+    param ($this, $propName)
     Write-Host "IN: Delete_Property"
     $customProps = $this.Document.CustomDocumentProperties
     if ($this.CheckNull($customProps, "CustomDocumentProperties is null. Cannot delete property.")) {
@@ -101,8 +101,8 @@
     Write-Host "OUT: Delete_Property"
 }
 
-# プロパティを取得するメソッド
-[hashtable] Get_Properties([string]$PropertyType) {
+function Get_Properties {
+    param ($this, $PropertyType)
     Write-Host "IN: Get_Properties"
     $properties = @{}
     $customProps = $this.Document.CustomDocumentProperties

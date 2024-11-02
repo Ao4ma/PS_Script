@@ -7,18 +7,16 @@ class WordDocument {
     [System.__ComObject]$WordApp
 
     WordDocument([string]$docFileName, [string]$docFilePath, [string]$scriptRoot) {
+        Write-Host "Initializing WordDocument..."
         $this.DocFileName = $docFileName
         $this.DocFilePath = $docFilePath
         $this.ScriptRoot = $scriptRoot
+        Write-Host "Creating Word Application COM object..."
         $this.WordApp = New-Object -ComObject Word.Application
         $this.WordApp.DisplayAlerts = 0  # wdAlertsNone
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
+        Write-Host "Opening document: $docPath"
         $this.Document = $this.WordApp.Documents.Open($docPath)
+        Write-Host "WordDocument initialized successfully."
     }
-
-    # メソッドのインポート
-    using module "$PSScriptRoot\WordDocumentProperties.psm1"
-    using module "$PSScriptRoot\WordDocumentUtilities.psm1"
-    using module "$PSScriptRoot\WordDocumentSignatures.psm1"
-    using module "$PSScriptRoot\WordDocumentChecks.psm1"
 }

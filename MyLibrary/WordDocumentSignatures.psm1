@@ -1,6 +1,6 @@
 # MyLibrary/WordDocumentSignatures.psm1
-# サイン欄に名前と日付を配置するメソッド
-[void] FillSignatures() {
+function FillSignatures {
+    param ($this)
     Write-Host "IN: FillSignatures"
 
     # カスタムプロパティから担当者、承認者、照査者の名前と日付を取得
@@ -12,7 +12,8 @@
     $照査者日付 = $this.Read_Property("照査者日付")
 
     # フォントサイズを計算する関数
-    function CalculateFontSize($text, $cellWidth) {
+    function CalculateFontSize {
+        param ($text, $cellWidth)
         $averageCharWidth = 0.6 # 平均的な文字の幅の割合（文字数に基づく調整）
         $textLength = $text.Length
         $fontSize = [math]::Floor($cellWidth / ($averageCharWidth * $textLength))
@@ -31,9 +32,9 @@
     $cellWidth3 = $cell3.Width
 
     # フォントサイズを計算
-    $fontSize1 = CalculateFontSize($担当者, $cellWidth1)
-    $fontSize2 = CalculateFontSize($承認者, $cellWidth2)
-    $fontSize3 = CalculateFontSize($照査者, $cellWidth3)
+    $fontSize1 = CalculateFontSize $担当者 $cellWidth1
+    $fontSize2 = CalculateFontSize $承認者 $cellWidth2
+    $fontSize3 = CalculateFontSize $照査者 $cellWidth3
 
     # 担当者のサイン欄
     $cell1.Range.Text = "$担当者`n$担当者日付"

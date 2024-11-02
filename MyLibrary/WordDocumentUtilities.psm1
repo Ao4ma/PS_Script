@@ -1,6 +1,6 @@
 # MyLibrary/WordDocumentUtilities.psm1
-# Nullチェックメソッド
-[bool] CheckNull([object]$obj, [string]$message) {
+function CheckNull {
+    param ($this, $obj, $message)
     if ($null -eq $obj) {
         Write-Host $message -ForegroundColor Red
         return $true
@@ -8,13 +8,13 @@
     return $false
 }
 
-# ドキュメントを別名で保存するメソッド
-[void] SaveAs([string]$NewFilePath) {
+function SaveAs {
+    param ($this, $NewFilePath)
     $this.Document.SaveAs([ref]$NewFilePath)
 }
 
-# ドキュメントを閉じるメソッド
-[void] Close() {
+function Close {
+    param ($this)
     $this.Document.Close([ref]$false)  # false を指定して変更を保存しない
     $this.WordApp.Quit()
     [System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.Document) | Out-Null
@@ -23,8 +23,8 @@
     [System.GC]::WaitForPendingFinalizers()
 }
 
-# ファイルに内容を書き込むメソッド
-[void] WriteToFile([string]$FilePath, [array]$Content) {
+function WriteToFile {
+    param ($this, $FilePath, $Content)
     if ($Content.Count -eq 0) {
         Write-Host "No content found. Deleting previous output file if it exists."
         if (Test-Path $FilePath) {
@@ -35,8 +35,8 @@
     }
 }
 
-# Wordプロセスを閉じるメソッド
-[void] Close_Word_Processes() {
+function Close_Word_Processes {
+    param ($this)
     Write-Host "IN: Close_Word_Processes"
     $existingWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
     if ($existingWordProcesses) {
@@ -47,8 +47,8 @@
     Write-Host "OUT: Close_Word_Processes"
 }
 
-# Wordが閉じられていることを確認するメソッド
-[void] Ensure_Word_Closed() {
+function Ensure_Word_Closed {
+    param ($this)
     Write-Host "IN: Ensure_Word_Closed"
     $newWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
     if ($newWordProcesses) {
