@@ -6,17 +6,25 @@ class WordDocument {
     [System.__ComObject]$Document
     [System.__ComObject]$WordApp
 
-    WordDocument([string]$docFileName, [string]$docFilePath, [string]$scriptRoot) {
-        Write-Host "Initializing WordDocument..."
+    WordDocument ([string]$docFileName, [string]$docFilePath, [string]$scriptRoot, [System.__ComObject]$wordApp) {
         $this.DocFileName = $docFileName
         $this.DocFilePath = $docFilePath
         $this.ScriptRoot = $scriptRoot
-        Write-Host "Creating Word Application COM object..."
-        $this.WordApp = New-Object -ComObject Word.Application
+        $this.WordApp = $wordApp
+
+        $this.ThrowIfError("Setting Word Application DisplayAlerts...")
         $this.WordApp.DisplayAlerts = 0  # wdAlertsNone
+        $this.ThrowIfError("Word Application DisplayAlerts set.")
+
         $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
-        Write-Host "Opening document: $docPath"
+        $this.ThrowIfError("Opening document: $docPath")
         $this.Document = $this.WordApp.Documents.Open($docPath)
-        Write-Host "WordDocument initialized successfully."
+        $this.ThrowIfError("Document opened successfully.")
+
+        $this.ThrowIfError("WordDocument initialized successfully.")
+    }
+
+    [void] ThrowIfError([string]$message) {
+        throw $message
     }
 }

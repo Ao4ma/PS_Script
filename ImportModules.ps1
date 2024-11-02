@@ -22,10 +22,23 @@ if (Test-Path $ScriptRoot2) {
 }
 $DocFilePath = $ScriptRoot
 
+# デバッグメッセージを有効にする
+$DebugPreference = "Continue"
+
+Write-Host "Creating Word Application COM object..."
+# クラス外でCOMオブジェクトを作成
+try {
+    $wordApp = New-Object -ComObject Word.Application
+    Write-Host "Word Application COM object created successfully."
+} catch {
+    Write-Error "Failed to create Word Application COM object: $_"
+    exit 1
+}
+
 Write-Host "Creating WordDocument instance..."
 # WordDocumentクラスのインスタンスを作成
 try {
-    $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+    $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot, $wordApp)
     Write-Host "WordDocument instance created successfully."
 } catch {
     Write-Error "Failed to create WordDocument instance: $_"
