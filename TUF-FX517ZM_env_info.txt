@@ -1,6 +1,6 @@
-IPAddress: 172.24.96.1 169.254.33.23 169.254.12.131 169.254.115.229 169.254.57.93 192.168.11.65 169.254.174.202 127.0.0.1
+ScriptLibraryPath: D:\Github\PS_Script
+DocFilePath: D:\Github\PS_Script\技100-999.docx
+PowerShellHome: 
 PCName: TUF-FX517ZM
 MACAddress: BC-09-1B-1B-53-E6
-PowerShellHome: 
-DocFilePath: D:\Github\PS_Script\技100-999.docx
-ScriptLibraryPath: D:\Github\PS_Script
+IPAddress: 172.24.96.1 169.254.33.23 169.254.12.131 169.254.115.229 169.254.57.93 192.168.11.65 169.254.174.202 127.0.0.1

@@ -46,7 +46,7 @@ class WordDoc {
 }
 
 # 使用例
-$OriginalFilePath = "C:\Users\y0927\Documents\GitHub\PS_Script\技100-999.docx"
-$NewFilePath = "C:\Users\y0927\Documents\GitHub\PS_Script\sample_temp.docx"
+$OriginalFilePath = "D:\Github\PS_Script\技100-999.docx"
+$NewFilePath = "D:\Github\PS_Script\sample_temp.docx"
 $docClass = [WordDoc]::new($OriginalFilePath)
 $docClass.SetCustomPropertyAndSaveAs("CustomProperty2", "Value2", $NewFilePath)
