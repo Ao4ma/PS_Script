@@ -1,29 +1,30 @@
+<#
 function Set_CustomProperty {
     param (
         [WordDocument]$wordDoc,
         [string]$PropertyName,
         [string]$Value
     )
-    Write-Host "SetCustomProperty: In"
+    Write-Host "Set_CustomProperty: In"
     $customProperties = $wordDoc.Document.CustomDocumentProperties
     $binding = "System.Reflection.BindingFlags" -as [type]
     [array]$arrayArgs = $PropertyName, $false, 4, $Value
     try {
         [System.__ComObject].InvokeMember("Add", $binding::InvokeMethod, $null, $customProperties, $arrayArgs) | Out-Null
-        Write-Host "SetCustomProperty: Out"
+        Write-Host "Set_CustomProperty: Out"
     } catch [system.exception] {
         try {
             $propertyObject = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProperties, $PropertyName)
             [System.__ComObject].InvokeMember("Delete", $binding::InvokeMethod, $null, $propertyObject, $null)
             [System.__ComObject].InvokeMember("Add", $binding::InvokeMethod, $null, $customProperties, $arrayArgs) | Out-Null
-            Write-Host "SetCustomProperty: Out (after delete)"
+            Write-Host "Set_CustomProperty: Out (after delete)"
         } catch {
-            Write-Error "Error in SetCustomProperty (inner catch): $_"
+            Write-Error "Error in Set_CustomProperty (inner catch): $_"
             throw $_
         }
     }
 }
-
+#>
 function Read_Property {
     param (
         [WordDocument]$wordDoc,

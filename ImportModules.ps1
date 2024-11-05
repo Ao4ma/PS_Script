@@ -28,7 +28,7 @@ $DebugPreference = "Continue"
 Write-Host "Creating Word Application COM object..."
 # クラス外でCOMオブジェクトを作成
 try {
-    $wordApp = New-Object -ComObject Word.Application
+   # $wordApp = New-Object -ComObject Word.Application
     Write-Host "Word Application COM object created successfully."
 } catch {
     Write-Error "Failed to create Word Application COM object: $_"
@@ -38,7 +38,7 @@ try {
 Write-Host "Creating WordDocument instance..."
 # WordDocumentクラスのインスタンスを作成
 try {
-    $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot, $wordApp)
+    $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
     Write-Host "WordDocument instance created successfully."
 } catch {
     Write-Error "Failed to create WordDocument instance: $_"
@@ -48,7 +48,7 @@ try {
 Write-Host "Calling Check_PC_Env..."
 # メソッドの呼び出し例
 try {
-    Check_PC_Env $wordDoc
+    $wordDoc.Check_PC_Env()
     Write-Host "Check_PC_Env completed successfully."
 } catch {
     Write-Error "Check_PC_Env failed: $_"
@@ -56,7 +56,7 @@ try {
 
 Write-Host "Calling Check_Word_Library..."
 try {
-    Check_Word_Library $wordDoc
+    $wordDoc.Check_Word_Library()
     Write-Host "Check_Word_Library completed successfully."
 } catch {
     Write-Error "Check_Word_Library failed: $_"
@@ -70,22 +70,57 @@ try {
     Write-Error "Check_Custom_Property failed: $_"
 }
 
+Write-Host "Calling SetCustomPropertyAndSaveAs..."
+try {
+    $wordDoc.SetCustomPropertyAndSaveAs("CustomProperty31", "Value31")
+    Write-Host "SetCustomPropertyAndSaveAs completed successfully."
+} catch {
+    Write-Error "SetCustomPropertyAndSaveAs failed: $_"
+}
+
+Write-Host "Creating WordDocument instance..."
+# WordDocumentクラスのインスタンスを作成
+try {
+    $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+    Write-Host "WordDocument instance created successfully."
+} catch {
+    Write-Error "Failed to create WordDocument instance: $_"
+    exit 1
+}
+
+
+
+
 Write-Host "Calling SetCustomProperty..."
 try {
-    SetCustomProperty $wordDoc "CustomProperty21" "Value21"
+#   実験的にここからはクラスメソッドとした
+    $wordDoc.SetCustomProperty("CustomProperty21", "Value21")
     Write-Host "SetCustomProperty completed successfully."
 } catch {
     Write-Error "SetCustomProperty failed: $_"
 }
 
+<#
 Write-Host "Calling SaveAs..."
 try {
-    SaveAs $wordDoc "$scriptRoot\sample_temp.docx"
+    $docPath = Join-Path -Path $wordDoc.DocFilePath -ChildPath $wordDoc.DocFileName
+    SaveAs $docPath "$scriptRoot\temp.docx"
     Write-Host "SaveAs completed successfully."
 } catch {
     Write-Error "SaveAs failed: $_"
 }
+#>
 
+Write-Host "Calling SetCustomProperty..."
+try {
+   # SetCustomProperty
+   $wordDoc.SetCustomProperty("CustomProperty1", "Value1")
+    Write-Host "SetCustomProperty completed successfully."
+} catch {
+    Write-Error "SetCustomProperty failed: $_"
+}
+
+<#
 Write-Host "Calling FillSignatures..."
 try {
     # サイン欄に名前と日付を配置
@@ -94,16 +129,18 @@ try {
 } catch {
     Write-Error "FillSignatures failed: $_"
 }
+#>
 
 Write-Host "Calling Read_Property..."
 try {
     # カスタムプロパティを読み取る
-    $propValue = Read_Property $wordDoc "CustomProperty2"
+    $propValue = Read_Property $wordDoc "CustomProperty21"
     Write-Host "Read Property Value: $propValue"
 } catch {
     Write-Error "Read_Property failed: $_"
 }
 
+<#
 Write-Host "Calling Update_Property..."
 try {
     # カスタムプロパティを更新する
@@ -112,11 +149,12 @@ try {
 } catch {
     Write-Error "Update_Property failed: $_"
 }
+#>
 
 Write-Host "Calling Delete_Property..."
 try {
     # カスタムプロパティを削除する
-    Delete_Property $wordDoc "CustomProperty2"
+    Delete_Property $wordDoc "CustomProperty21"
     Write-Host "Delete_Property completed successfully."
 } catch {
     Write-Error "Delete_Property failed: $_"
@@ -125,7 +163,7 @@ try {
 Write-Host "Calling Close..."
 try {
     # ドキュメントを閉じる
-    Close $wordDoc
+    $wordDoc.Close() 
     Write-Host "Close completed successfully."
 } catch {
     Write-Error "Close failed: $_"

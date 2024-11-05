@@ -54,14 +54,19 @@ class WordDocument {
     }
 
     # カスタムプロパティを設定して別名で保存するメソッド
-    [void] SetCustomPropertyAndSaveAs([string]$PropertyName, [string]$Value, [string]$NewFilePath) {
+    [void] SetCustomPropertyAndSaveAs([string]$PropertyName, [string]$Value) {
         Write-Host "SetCustomPropertyAndSaveAs: In"
         $this.SetCustomProperty($PropertyName, $Value)
-        $this.SaveAs($NewFilePath)
+        
+        # 一時ファイルパスを定義
+        $timestamp = Get-Date -Format "yyyyMMddHHmmss"
+        $tempFilePath = Join-Path -Path $this.DocFilePath -ChildPath "$($this.DocFileName)_$timestamp"
+
+        $this.SaveAs($tempFilePath)
         $this.Close()
         Start-Sleep -Seconds 2  # 少し待機
         Remove-Item -Path (Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName) -Force
-        Rename-Item -Path $NewFilePath -NewName (Split-Path $this.DocFileName -Leaf)
+        Rename-Item -Path $tempFilePath -NewName (Split-Path $this.DocFileName -Leaf)
         Write-Host "SetCustomPropertyAndSaveAs: Out"
     }
 
@@ -398,7 +403,7 @@ $wordDoc.Check_PC_Env()
 $wordDoc.Check_Word_Library()
 $wordDoc.SetCustomProperty("CustomProperty1", "Value1")
 $wordDoc.Check_Custom_Property()
-$wordDoc.SetCustomPropertyAndSaveAs("CustomProperty21", "Value21", "C:\Users\y0927\Documents\GitHub\PS_Script\sample_temp.docx")
+$wordDoc.SetCustomPropertyAndSaveAs("CustomProperty21", "Value21")
 
 # 新しいインスタンスを作成してから操作を続行
 $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)

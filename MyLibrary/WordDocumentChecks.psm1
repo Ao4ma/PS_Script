@@ -1,3 +1,4 @@
+<#
 function Check_PC_Env {
     param (
         [WordDocument]$wordDoc
@@ -29,7 +30,7 @@ function Check_Word_Library {
     }
     Write-Host "OUT: Check_Word_Library"
 }
-
+#>
 function Check_Custom_Property {
     param (
         [WordDocument]$wordDoc
