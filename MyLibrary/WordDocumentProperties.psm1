@@ -1,8 +1,11 @@
-# MyLibrary/WordDocumentProperties.psm1
-function SetCustomProperty {
-    param ($this, $PropertyName, $Value)
+function Set_CustomProperty {
+    param (
+        [WordDocument]$wordDoc,
+        [string]$PropertyName,
+        [string]$Value
+    )
     Write-Host "SetCustomProperty: In"
-    $customProperties = $this.Document.CustomDocumentProperties
+    $customProperties = $wordDoc.Document.CustomDocumentProperties
     $binding = "System.Reflection.BindingFlags" -as [type]
     [array]$arrayArgs = $PropertyName, $false, 4, $Value
     try {
@@ -10,7 +13,6 @@ function SetCustomProperty {
         Write-Host "SetCustomProperty: Out"
     } catch [system.exception] {
         try {
-            # プロパティが既に存在している場合の処理
             $propertyObject = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProperties, $PropertyName)
             [System.__ComObject].InvokeMember("Delete", $binding::InvokeMethod, $null, $propertyObject, $null)
             [System.__ComObject].InvokeMember("Add", $binding::InvokeMethod, $null, $customProperties, $arrayArgs) | Out-Null
@@ -23,17 +25,22 @@ function SetCustomProperty {
 }
 
 function Read_Property {
-    param ($this, $propName)
+    param (
+        [WordDocument]$wordDoc,
+        [string]$PropertyName
+    )
     Write-Host "IN: Read_Property"
-    $customProps = $this.Document.CustomDocumentProperties
-    if ($this.CheckNull($customProps, "CustomDocumentProperties is null. Cannot read property.")) {
+    $customProps = $wordDoc.Document.CustomDocumentProperties
+    if ($null -eq $customProps) {
+        Write-Host "CustomDocumentProperties is null. Cannot read property."
         Write-Host "OUT: Read_Property"
         return $null
     }
 
     $binding = "System.Reflection.BindingFlags" -as [type]
-    $prop = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProps, @($propName))
-    if ($this.CheckNull($prop, "Property '$($propName)' not found.")) {
+    $prop = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProps, @($PropertyName))
+    if ($null -eq $prop) {
+        Write-Host "Property '$($PropertyName)' not found."
         Write-Host "OUT: Read_Property"
         return $null
     }
@@ -44,82 +51,52 @@ function Read_Property {
 }
 
 function Update_Property {
-    param ($this, $propName, $propValue)
+    param (
+        [WordDocument]$wordDoc,
+        [string]$PropertyName,
+        [string]$PropertyValue
+    )
     Write-Host "IN: Update_Property"
-    $customProps = $this.Document.CustomDocumentProperties
-    if ($this.CheckNull($customProps, "CustomDocumentProperties is null. Cannot update property.")) {
+    $customProps = $wordDoc.Document.CustomDocumentProperties
+    if ($null -eq $customProps) {
+        Write-Host "CustomDocumentProperties is null. Cannot update property."
         Write-Host "OUT: Update_Property"
         return
     }
 
     $binding = "System.Reflection.BindingFlags" -as [type]
-    $prop = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProps, @($propName))
-    if ($this.CheckNull($prop, "Property '$($propName)' not found.")) {
+    $prop = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProps, @($PropertyName))
+    if ($null -eq $prop) {
+        Write-Host "Property '$($PropertyName)' not found."
         Write-Host "OUT: Update_Property"
         return
     }
 
-    $this.InvokeComObjectMember($prop, "Value", "SetProperty", @($propValue))
-
-    # 一旦別名保存し、クローズして、GCしてからファイルリネーム
-    $tempFilePath = Join-Path -Path $this.DocFilePath -ChildPath "temp_$($this.DocFileName)"
-    $this.SaveAs($tempFilePath)
-    $this.Close()
-    Start-Sleep -Seconds 2  # 少し待機
-    Remove-Item -Path (Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName) -Force
-    Rename-Item -Path $tempFilePath -NewName (Split-Path $this.DocFileName -Leaf)
-
+    [System.__ComObject].InvokeMember("Value", $binding::SetProperty, $null, $prop, @($PropertyValue))
     Write-Host "OUT: Update_Property"
 }
 
 function Delete_Property {
-    param ($this, $propName)
+    param (
+        [WordDocument]$wordDoc,
+        [string]$PropertyName
+    )
     Write-Host "IN: Delete_Property"
-    $customProps = $this.Document.CustomDocumentProperties
-    if ($this.CheckNull($customProps, "CustomDocumentProperties is null. Cannot delete property.")) {
+    $customProps = $wordDoc.Document.CustomDocumentProperties
+    if ($null -eq $customProps) {
+        Write-Host "CustomDocumentProperties is null. Cannot delete property."
         Write-Host "OUT: Delete_Property"
         return
     }
 
     $binding = "System.Reflection.BindingFlags" -as [type]
-    $prop = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProps, @($propName))
-    if ($this.CheckNull($prop, "Property '$($propName)' not found.")) {
+    $prop = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProps, @($PropertyName))
+    if ($null -eq $prop) {
+        Write-Host "Property '$($PropertyName)' not found."
         Write-Host "OUT: Delete_Property"
         return
     }
 
-    $this.InvokeComObjectMember($customProps, "Delete", "InvokeMethod", @($propName))
-
-    # 一旦別名保存し、クローズして、GCしてからファイルリネーム
-    $tempFilePath = Join-Path -Path $this.DocFilePath -ChildPath "temp_$($this.DocFileName)"
-    $this.SaveAs($tempFilePath)
-    $this.Close()
-    Start-Sleep -Seconds 2  # 少し待機
-    Remove-Item -Path (Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName) -Force
-    Rename-Item -Path $tempFilePath -NewName (Split-Path $this.DocFileName -Leaf)
-
+    [System.__ComObject].InvokeMember("Delete", $binding::InvokeMethod, $null, $prop, $null)
     Write-Host "OUT: Delete_Property"
-}
-
-function Get_Properties {
-    param ($this, $PropertyType)
-    Write-Host "IN: Get_Properties"
-    $properties = @{}
-    $customProps = $this.Document.CustomDocumentProperties
-    if ($this.CheckNull($customProps, "CustomDocumentProperties is null. Cannot get properties.")) {
-        Write-Host "OUT: Get_Properties"
-        return $properties
-    }
-
-    $binding = "System.Reflection.BindingFlags" -as [type]
-    $propCount = [System.__ComObject].InvokeMember("Count", $binding::GetProperty, $null, $customProps, @())
-    for ($i = 1; $i -le $propCount; $i++) {
-        $prop = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProps, @($i))
-        $propName = [System.__ComObject].InvokeMember("Name", $binding::GetProperty, $null, $prop, @())
-        $propValue = [System.__ComObject].InvokeMember("Value", $binding::GetProperty, $null, $prop, @())
-        $properties[$propName] = $propValue
-    }
-
-    Write-Host "OUT: Get_Properties"
-    return $properties
 }
