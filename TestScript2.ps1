@@ -59,7 +59,7 @@ class WordDocument {
 }
 
 # ドキュメントのパスとファイル名を設定
-$FilePath = "D:\Github\PS_Script\技100-999.docx"
+$FilePath = "C:\Users\y0927\Documents\GitHub\PS_Script\技100-999.docx"
 
 # WordDocumentクラスのインスタンスを作成
 $wordDoc = [WordDocument]::new($FilePath)
