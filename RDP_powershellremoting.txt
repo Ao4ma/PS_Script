@@ -1,0 +1,26 @@
+# サーバーのホスト名またはIPアドレス
+$server = "ServerName"
+
+# RDPセッションを確認する関数
+function Get-RDPSessions {
+    quser /server:$server | Select-String "rdp-tcp"
+}
+
+# RDPセッションが存在するか確認
+function IsRDPSessionActive {
+    $sessions = Get-RDPSessions
+    return $sessions -ne $null
+}
+
+# RDPセッションが終了するまで待機
+while (IsRDPSessionActive) {
+    Write-Host "RDPセッションがアクティブです。終了を待機しています..."
+    Start-Sleep -Seconds 30
+}
+
+Write-Host "RDPセッションが終了しました。クライアントにRDP接続を開始します。"
+
+# クライアントにRDP接続を開始するコマンド
+# ここでは、クライアントのホスト名またはIPアドレスを指定します
+$client = "ClientName"
+mstsc /v:$client
