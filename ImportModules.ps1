@@ -6,6 +6,7 @@ using module ".\MyLibrary\WordDocumentUtilities.psm1"
 using module ".\MyLibrary\WordDocumentSignatures.psm1"
 using module ".\MyLibrary\WordDocumentChecks.psm1"
 using module ".\MyLibrary\WordDocument.psm1"
+using module ".\MyLibrary\Word_Class.psm1"
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
 

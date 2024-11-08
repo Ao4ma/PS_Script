@@ -292,26 +292,30 @@ class Word {
 }
 
 # Wordプロセスを閉じる関数
-function Close_WordProcesses() {
-    Write-Host "IN: Close_WordProcesses"
-    $existingWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
-    if ($existingWordProcesses) {
-        foreach ($process in $existingWordProcesses) {
-            Stop-Process -Id $process.Id -Force
+function Close_WordProcesses {
+    Write-Host "Closing Word processes..."
+    Get-Process -Name WINWORD -ErrorAction SilentlyContinue | ForEach-Object {
+        try {
+            $_.CloseMainWindow()
+            $_.WaitForExit(5000)
+            if (!$_.HasExited) {
+                $_.Kill()
+            }
+            Write-Host "Closed Word process: $($_.Id)"
+        } catch {
+            Write-Error "Failed to close Word process: $_"
         }
     }
-    Write-Host "OUT: Close_WordProcesses"
 }
 
 # Wordが閉じられていることを確認する関数
-function Ensure_WordClosed() {
-    Write-Host "IN: Ensure_WordClosed"
-    $newWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
-    if ($newWordProcesses) {
-        foreach ($process in $newWordProcesses) {
-            Stop-Process -Id $process.Id -Force
-        }
+function Ensure_WordClosed {
+    Write-Host "Ensuring all Word processes are closed..."
+    $wordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
+    if ($wordProcesses) {
+        Close_WordProcesses
+    } else {
+        Write-Host "No Word processes found."
     }
-    Write-Host "OUT: Ensure_WordClosed"
 }
 
