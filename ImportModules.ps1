@@ -172,7 +172,7 @@ try {
 Write-Host "Calling Close_Word_Processes..."
 try {
     # Wordプロセスを閉じる
-    Close_Word_Processes $wordDoc
+    Close_WordProcesses
     Write-Host "Close_Word_Processes completed successfully."
 } catch {
     Write-Error "Close_Word_Processes failed: $_"
@@ -181,7 +181,7 @@ try {
 Write-Host "Calling Ensure_Word_Closed..."
 try {
     # Wordが閉じられていることを確認する
-    Ensure_Word_Closed $wordDoc
+    Ensure_WordClosed
     Write-Host "Ensure_Word_Closed completed successfully."
 } catch {
     Write-Error "Ensure_Word_Closed failed: $_"

@@ -290,3 +290,28 @@ class Word {
         return $iniContent
     }
 }
+
+# Wordプロセスを閉じる関数
+function Close_WordProcesses() {
+    Write-Host "IN: Close_WordProcesses"
+    $existingWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
+    if ($existingWordProcesses) {
+        foreach ($process in $existingWordProcesses) {
+            Stop-Process -Id $process.Id -Force
+        }
+    }
+    Write-Host "OUT: Close_WordProcesses"
+}
+
+# Wordが閉じられていることを確認する関数
+function Ensure_WordClosed() {
+    Write-Host "IN: Ensure_WordClosed"
+    $newWordProcesses = Get-Process -Name WINWORD -ErrorAction SilentlyContinue
+    if ($newWordProcesses) {
+        foreach ($process in $newWordProcesses) {
+            Stop-Process -Id $process.Id -Force
+        }
+    }
+    Write-Host "OUT: Ensure_WordClosed"
+}
+
