@@ -37,7 +37,8 @@ if (-not $wdInformationAvailable -or -not $documentAvailable) {
     $word.Visible = $true
 
     # ドキュメントを開く
-    $doc = $word.Documents.Open("C:\Users\y0927\Documents\GitHub\PS_Script\技100-999.docx")
+#    $doc = $word.Documents.Open("C:\Users\y0927\Documents\GitHub\PS_Script\技100-999.docx")
+    $doc = $word.Documents.Open("D:\GitHub\PS_Script\技100-999.docx")
 
     # WdInformationの直接値を使用
     $wdVerticalPositionRelativeToPage = 1
@@ -135,7 +136,8 @@ $word = New-Object -ComObject Word.Application
 $word.Visible = $true
 
 # ドキュメントを開く
-$doc = $word.Documents.Open("C:\Users\y0927\Documents\GitHub\PS_Script\技100-999.docx")
+# $doc = $word.Documents.Open("C:\Users\y0927\Documents\GitHub\PS_Script\技100-999.docx")
+$doc = $word.Documents.Open("D:\GitHub\PS_Script\技100-999.docx")
 
 # 役割配列
 $roles = @("承認", "照査", "作成")
