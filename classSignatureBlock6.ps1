@@ -223,7 +223,7 @@ function Process_AvailableTypes {
                 $name_Value = $custom_Properties.Item($name_Property).Value
         
                 $name_Cell.Range.Text = "$($date_Value)`n$($name_Value)"
-                $name_Cell.Range.ParagraphFormat.Alignment = [Microsoft.Office.Interop.Word.WdParagraphAlignment]::wdAlignParagraphCenter
+                $name_Cell.Range.ParagraphFormat.Alignment = 1  # wdAlignParagraphCenter
                 $name_Cell.Range.Paragraphs[1].Range.Font.Size = 8
                 $name_Cell.Range.Paragraphs[2].Range.Font.Size = 10
             }
@@ -279,7 +279,7 @@ function Process_AvailableTypes {
                 $name = "名前"
                     
                 $name_Cell.Range.Text = "$($date)`n$($name)"
-                $name_Cell.Range.ParagraphFormat.Alignment = [Microsoft.Office.Interop.Word.WdParagraphAlignment]::wdAlignParagraphCenter
+                $name_Cell.Range.ParagraphFormat.Alignment = 1  # wdAlignParagraphCenter
                 $name_Cell.Range.Font.Size = 8
                 $name_Cell.Range.Paragraphs[2].Range.Font.Size = 10
             }
