@@ -122,7 +122,7 @@ class Word {
             "Content Status", "Language", "Document Version"
         )
 
-        $CustomPropertiesGroup = @("batter", "yamada", "Path")
+        $CustomPropertiesGroup = @("batter", "yamada", "Path","承認者", "承認日", "照査者","照査日", "作成者", "作成日")
 
         try {
             Write-Host "Start Standard Properties (ビルドインプロパティ):"

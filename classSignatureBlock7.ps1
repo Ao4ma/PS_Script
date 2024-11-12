@@ -220,28 +220,79 @@ function Process_AvailableTypes {
             }
         }
 
-        [hashtable] Get_Signature_Coordinates([string]$cell_Set_Type) {
-            if ($cell_Set_Type -eq "above") {
-                $signature_Origin = $this.Table.Cell(1, 1).Range.Information($this.wdInformation)
-                $signature_Diagonal = $this.Table.Cell(2, 3).Range.Information($this.wdInformation)
-            } elseif ($cell_Set_Type -eq "left") {
-                $signature_Origin = $this.Table.Cell(1, 1).Range.Information($this.wdInformation)
-                $signature_Diagonal = $this.Table.Cell(1, 3).Range.Information($this.wdInformation)
-            } else {
-                throw "無効なセルセットタイプです。「above」または「left」を使用してください。"
-            }
-                
-            return @{
-                Origin = $signature_Origin
-                Diagonal = $signature_Diagonal
+        [hashtable] Get_Signature_Coordinates() {
+        # [hashtable] Get_Signature_Coordinates([string]$cell_Set_Type) {
+
+            $signature_Info = @{}
+
+        # 役割名のセル座標を取得
+        $role_Coordinates = @()
+        foreach ($role in $this.Roles) {
+            foreach ($cell in $this.Table.Range.Cells) {
+                $cellText = $cell.Range.Text.Trim()
+                if (-not [string]::IsNullOrWhiteSpace($cellText)) {
+                    # 不要な文字とスペースを削除
+                    $cleanedCellText = $cellText -replace '[^\p{L}\p{N}\p{Zs}]', '' -replace '\s+', ''
+                    if ($cleanedCellText -eq $role) {
+                        $role_Coordinates += [pscustomobject]@{
+                            Role = $role
+                            Row = $cell.RowIndex
+                            Column = $cell.ColumnIndex
+                        }
+                        break
+                    }
+                }
             }
         }
 
+        if ($role_Coordinates.Count -ne $this.Roles.Length) {
+            throw "役割名のセルが見つかりませんでした。"
+                }
+
+        # 役割名の位置関係からタイプを決める
+        $sign_Cells = @()
+        $type = "役割名上タイプ"
+        for ($i = 0; $i -lt $role_Coordinates.Count - 1; $i++) {
+            if ($role_Coordinates[$i].Column + 1 -ne $role_Coordinates[$i + 1].Column) {
+                $type = "役割名左タイプ"
+                break
+            }
+        }
+
+        # サイン用セルの位置を求める
+        foreach ($role in $role_Coordinates) {
+            if ($type -eq "役割名上タイプ") {
+                # 役割名上タイプ
+                $sign_Cells += [pscustomobject]@{
+                    Role = $role.Role
+                    Row = $role.Row + 1
+                    Column = $role.Column
+                }
+            } else {
+                # 役割名左タイプ
+                $sign_Cells += [pscustomobject]@{
+                    Role = $role.Role
+                    Row = $role.Row
+                    Column = $role.Column + 1
+                }
+            }
+        }
+
+        $signature_Info.Type = $type
+        $signature_Info.Sign_Cells = $sign_Cells
+
+        return $signature_Info
+    }
+
+    
         [array] Get_Cell_Info() {
             $cell_Info = @()
                 
             for ($row = 1; $row -le 2; $row++) {
                 for ($col = 1; $col -le 3; $col++) {
+                    if ($row -gt $this.Table.Rows.Count -or $col -gt $this.Table.Columns.Count) {
+                        throw "指定されたセルが存在しません。"
+                    }
                     $cell = $this.Table.Cell($row, $col)
                     $cell_Range = $cell.Range
                     $cell_Text = $cell_Range.Text.Trim()
@@ -258,7 +309,7 @@ function Process_AvailableTypes {
             return $cell_Info
         }
         
-        [void] Set_Custom_Attributes() {
+        [void] Set_Custom_Attributes_at_signature_Block() {
             $custom_Properties = $this.Doc.CustomDocumentProperties
         
             $role_To_Property_Map = @{
@@ -267,29 +318,52 @@ function Process_AvailableTypes {
                 "作成" = @{ Date = "作成日"; Name = "作成者" }
             }
         
-            foreach ($role in $this.Roles) {
-                $role_Index = $this.Roles.IndexOf($role) + 1
-                $name_Cell = $this.Table.Cell(2, $role_Index)
-        
-                $date_Property = $role_To_Property_Map[$role].Date
-                $name_Property = $role_To_Property_Map[$role].Name
-        
+    # サイン用セルの情報を変数から取得
+    $sign_Cells = $this.Get_Signature_Coordinates().Sign_Cells
+
+    foreach ($cell in $sign_Cells) {
+        $role = $cell.Role
+        $row = $cell.Row
+        $column = $cell.Column
+
+        $date_Property = $role_To_Property_Map[$role].Date
+        $name_Property = $role_To_Property_Map[$role].Name
+
+        if ($custom_Properties -ne $null) {
+            try {
                 $date_Value = $custom_Properties.Item($date_Property).Value
-                $name_Value = $custom_Properties.Item($name_Property).Value
-        
-                $name_Cell.Range.Text = "$($date_Value)`n$($name_Value)"
-                $name_Cell.Range.ParagraphFormat.Alignment = 1  # wdAlignParagraphCenter
-                $name_Cell.Range.Paragraphs[1].Range.Font.Size = 8
-                $name_Cell.Range.Paragraphs[2].Range.Font.Size = 10
+            } catch {
+                $date_Value = "日付なし"
             }
+
+            try {
+                $name_Value = $custom_Properties.Item($name_Property).Value
+            } catch {
+                $name_Value = "名前なし"
+            }
+        } else {
+            $date_Value = "日付なし"
+            $name_Value = "名前なし"
+        }
+
+        $cell_Text = "$($date_Value)`n$($name_Value)"
+        $this.Table.Cell($row, $column).Range.Text = $cell_Text
+        $this.Table.Cell($row, $column).Range.ParagraphFormat.Alignment = 1  # wdAlignParagraphCenter
+        $this.Table.Cell($row, $column).Range.Paragraphs[1].Range.Font.Size = 8
+        $this.Table.Cell($row, $column).Range.Paragraphs[2].Range.Font.Size = 10
+    }
         }
         
         [array] Get_Role_Above_Cell_Set() {
             $role_Above_Cell_Set = @()
                 
             foreach ($role in $this.Roles) {
-                $role_Cell = $this.Table.Cell(1, ($this.Roles.IndexOf($role) + 1))
-                $name_Cell = $this.Table.Cell(2, ($this.Roles.IndexOf($role) + 1))
+                $role_Index = $this.Roles.IndexOf($role) + 1
+                if ($role_Index -gt $this.Table.Columns.Count) {
+                    throw "指定されたセルが存在しません。"
+                }
+                $role_Cell = $this.Table.Cell(1, $role_Index)
+                $name_Cell = $this.Table.Cell(2, $role_Index)
                     
                 $role_Above_Cell_Set += [pscustomobject]@{
                     Role = $role
@@ -305,8 +379,12 @@ function Process_AvailableTypes {
             $role_Left_Cell_Set = @()
                 
             foreach ($role in $this.Roles) {
-                $role_Cell = $this.Table.Cell(1, ($this.Roles.IndexOf($role) + 1))
-                $name_Cell = $this.Table.Cell(1, ($this.Roles.IndexOf($role) + 2))
+                $role_Index = $this.Roles.IndexOf($role) + 1
+                if ($role_Index -gt $this.Table.Columns.Count - 1) {
+                    throw "指定されたセルが存在しません。"
+                }
+                $role_Cell = $this.Table.Cell(1, $role_Index)
+                $name_Cell = $this.Table.Cell(1, $role_Index + 1)
                     
                 $role_Left_Cell_Set += [pscustomobject]@{
                     Role = $role
@@ -367,33 +445,18 @@ function Process_AvailableTypes {
     }
 
     # サイン欄の座標を取得
-    $signature_Coordinates = $signature_Block.Get_Signature_Coordinates("left")
-    Write-Host "サイン欄原点の座標: $($signature_Coordinates.Origin)"
-    Write-Host "サイン欄対角の座標: $($signature_Coordinates.Diagonal)"
-    
-    # サイン欄内のセル情報を取得
-    $cell_Info = $signature_Block.Get_Cell_Info()
-    foreach ($info in $cell_Info) {
-        Write-Host "セル番号: $($info.Cell_Number), 位置: $($info.Position), 座標: $($info.Position)"
+    $signature_Coordinates = $signature_Block.Get_Signature_Coordinates()
+    Write-Host "サイン欄タイプ: $($signature_Coordinates.Type)"
+    foreach ($sign_Cell in $signature_Coordinates.Sign_Cells) {
+        Write-Host "サイン用セル：役割: $($sign_Cell.Role), 行: $($sign_Cell.Row), 列: $($sign_Cell.Column)"
     }
     
-    # 役割上セルセットの情報を取得
-    $role_Above_Cell_Set = $signature_Block.Get_Role_Above_Cell_Set()
-    foreach ($cell_Set in $role_Above_Cell_Set) {
-        Write-Host "役割: $($cell_Set.Role), 役割セル: $($cell_Set.Role_Cell), 名前セル: $($cell_Set.Name_Cell)"
-    }
-    
-    # 役割左セルセットの情報を取得
-    $role_Left_Cell_Set = $signature_Block.Get_Role_Left_Cell_Set()
-    foreach ($cell_Set in $role_Left_Cell_Set) {
-        Write-Host "役割: $($cell_Set.Role), 役割セル: $($cell_Set.Role_Cell), 名前セル: $($cell_Set.Name_Cell)"
-    }
+
     
     # カスタム属性を設定
-    $signature_Block.Set_Custom_Attributes()
+    $signature_Block.Set_Custom_Attributes_at_signature_Block()
     
-    # 役割名セルを設定
-    $signature_Block.Set_Role_Name_Cells("left")
+
     
     # ドキュメントを保存して閉じる
     $doc.Save()

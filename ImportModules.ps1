@@ -74,7 +74,85 @@ try {
 Write-Host "Calling SetCustomPropertyAndSaveAs..."
 try {
     $wordDoc.SetCustomPropertyAndSaveAs("CustomProperty31", "Value31")
+
+    Write-Host "Creating WordDocument instance..."
+    # WordDocumentクラスのインスタンスを作成
+    try {
+        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        Write-Host "WordDocument instance created successfully."
+    } catch {
+        Write-Error "Failed to create WordDocument instance: $_"
+        exit 1
+    }
+    $wordDoc.SetCustomPropertyAndSaveAs("承認者", "大谷")
+
+    Write-Host "Creating WordDocument instance..."
+    # WordDocumentクラスのインスタンスを作成
+    try {
+        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        Write-Host "WordDocument instance created successfully."
+    } catch {
+        Write-Error "Failed to create WordDocument instance: $_"
+        exit 1
+    }
+    $wordDoc.SetCustomPropertyAndSaveAs("承認日", "2024/11/11")
+
+    Write-Host "Creating WordDocument instance..."
+    # WordDocumentクラスのインスタンスを作成
+    try {
+        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        Write-Host "WordDocument instance created successfully."
+    } catch {
+        Write-Error "Failed to create WordDocument instance: $_"
+        exit 1
+    }
+    $wordDoc.SetCustomPropertyAndSaveAs("照査者", "ベッツ")
+
+    Write-Host "Creating WordDocument instance..."
+    # WordDocumentクラスのインスタンスを作成
+    try {
+        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        Write-Host "WordDocument instance created successfully."
+    } catch {
+        Write-Error "Failed to create WordDocument instance: $_"
+        exit 1
+    }
+    $wordDoc.SetCustomPropertyAndSaveAs("照査日", "2024/11/12")
+
+    Write-Host "Creating WordDocument instance..."
+    # WordDocumentクラスのインスタンスを作成
+    try {
+        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        Write-Host "WordDocument instance created successfully."
+    } catch {
+        Write-Error "Failed to create WordDocument instance: $_"
+        exit 1
+    }
+    $wordDoc.SetCustomPropertyAndSaveAs("作成者", "フリーマン")
+
+    Write-Host "Creating WordDocument instance..."
+    # WordDocumentクラスのインスタンスを作成
+    try {
+        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        Write-Host "WordDocument instance created successfully."
+    } catch {
+        Write-Error "Failed to create WordDocument instance: $_"
+        exit 1
+    }
+    $wordDoc.SetCustomPropertyAndSaveAs("作成日", "2024/11/13")
+
+    Write-Host "Creating WordDocument instance..."
+    # WordDocumentクラスのインスタンスを作成
+    try {
+        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        Write-Host "WordDocument instance created successfully."
+    } catch {
+        Write-Error "Failed to create WordDocument instance: $_"
+        exit 1
+    }
+    $wordDoc.SetCustomPropertyAndSaveAs("CustomProperty33", "Value33")
     Write-Host "SetCustomPropertyAndSaveAs completed successfully."
+
 } catch {
     Write-Error "SetCustomPropertyAndSaveAs failed: $_"
 }
@@ -88,9 +166,6 @@ try {
     Write-Error "Failed to create WordDocument instance: $_"
     exit 1
 }
-
-
-
 
 Write-Host "Calling SetCustomProperty..."
 try {
@@ -141,6 +216,21 @@ try {
     Write-Error "Read_Property failed: $_"
 }
 
+
+Write-Host "Calling SetCustomProperty..."
+try {
+   # SetCustomProperty
+   $wordDoc.SetCustomProperty("承認者", "大谷")
+   $wordDoc.SetCustomProperty("承認日", "2024/11/11")
+   $wordDoc.SetCustomProperty("照査者", "大谷")
+   $wordDoc.SetCustomProperty("照査日", "2024/11/12")
+   $wordDoc.SetCustomProperty("作成者", "フリーマン")
+   $wordDoc.SetCustomProperty("作成日", "2024/11/13")
+    Write-Host "SetCustomProperty completed successfully."
+} catch {
+    Write-Error "SetCustomProperty failed: $_"
+}
+
 <#
 Write-Host "Calling Update_Property..."
 try {
@@ -188,6 +278,7 @@ try {
     Write-Error "Ensure_Word_Closed failed: $_"
 }
 
+<#
 Write-Host "Calling WriteToFile..."
 try {
     # ファイルに出力
@@ -205,6 +296,7 @@ try {
 } catch {
     Write-Error "Get_Properties failed: $_"
 }
+#>
 
 Write-Host "Script completed successfully."
 
