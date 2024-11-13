@@ -1,7 +1,7 @@
 # ImportModules2.ps1
 
 # ここで直接パスを指定します
-#using module .\MyLibrary\WordDocumentProperties.psm1
+using module .\MyLibrary\WordDocumentProperties.psm1
 #using module .\MyLibrary\WordDocumentUtilities.psm1
 #using module .\MyLibrary\WordDocumentSignatures.psm1
 using module .\MyLibrary\WordDocumentChecks.psm1
@@ -9,6 +9,9 @@ using module .\MyLibrary\WordDocument.psm1
 #using module .\MyLibrary\Word_Class.psm1
 #using module .\MyLibrary\Word_Table.psm1
 # using module .\MyLibrary\Word_Sign.psm1
+
+# Access_Word5.psm1をインポート
+# Import-Module .\MyLibrary\Access_Word_5.psm1
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
@@ -67,13 +70,27 @@ try {
     Write-Error "Check_Word_Library failed: $_"
 }
 
+
 Write-Host "Calling checkCustomProperty..."
 try {
-    checkCustomProperty $wordDoc
+    $wordDoc.checkCustomProperty2()
     Write-Host "checkCustomProperty completed successfully."
 } catch {
     Write-Error "checkCustomProperty failed: $_"
 }
+
+
+# カスタムプロパティを読み取る
+$propValue = $wordDoc.Read_Property2("CustomProperty1")
+Write-Host "Read Property Value: $propValue"
+$propValue = $wordDoc.Read_Property2("CustomProperty2")
+Write-Host "Read Property Value: $propValue"
+$propValue = $wordDoc.Read_Property2("CustomProperty31")
+Write-Host "Read Property Value: $propValue"
+$propValue = $wordDoc.Read_Property2("承認者")
+Write-Host "Read Property Value: $propValue"
+
+
 
 Write-Host "Calling SetCustomPropertyAndSaveAs..."
 try {
@@ -211,14 +228,7 @@ try {
 }
 #>
 
-Write-Host "Calling Read_Property..."
-try {
-    # カスタムプロパティを読み取る
-    $propValue = Read_Property $wordDoc "CustomProperty21"
-    Write-Host "Read Property Value: $propValue"
-} catch {
-    Write-Error "Read_Property failed: $_"
-}
+
 
 
 Write-Host "Calling SetCustomProperty..."
@@ -234,6 +244,32 @@ try {
 } catch {
     Write-Error "SetCustomProperty failed: $_"
 }
+
+
+# カスタムプロパティを読み取る
+$propValue = $wordDoc.Read_Property2("作成者")
+Write-Host "Read Property Value: $propValue"
+$propValue = $wordDoc.Read_Property2("作成日")
+Write-Host "Read Property Value: $propValue"
+$propValue = $wordDoc.Read_Property2("照査者")
+Write-Host "Read Property Value: $propValue"
+$propValue = $wordDoc.Read_Property2("照査日")
+Write-Host "Read Property Value: $propValue"
+$propValue = $wordDoc.Read_Property2("承認者")
+Write-Host "Read Property Value: $propValue"
+$propValue = $wordDoc.Read_Property2("承認日")
+Write-Host "Read Property Value: $propValue"
+
+
+
+
+
+
+
+
+
+
+
 
 <#
 Write-Host "Calling Update_Property..."

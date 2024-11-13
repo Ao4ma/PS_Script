@@ -54,7 +54,7 @@ function checkCustomProperty {
     foreach ($prop in $customProps) {
         $propName = $prop.Name
         $propValue = $prop.GetType().InvokeMember("Value", $bindingFlags, $null, $prop, $null)
-        $customPropsList += "$propName: $propValue"
+        $customPropsList += "${propName}: ${propValue}"
     }
 
     $outputFilePath = Join-Path -Path $wordDoc.ScriptRoot -ChildPath "custom_properties.txt"

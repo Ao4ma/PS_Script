@@ -1,3 +1,5 @@
+using module .\WordDocumentUtilities.psm1
+
 class WordDocument {
     [string]$docFilePath
     [string]$scriptRoot
@@ -6,7 +8,7 @@ class WordDocument {
 
     WordDocument([string]$docFilePath, [string]$scriptRoot) {
         # $this.DocFileName
-        $this.docFilePath = $docFilePath
+        # $this.docFilePath = $docFilePath
         $this.scriptRoot = $scriptRoot
         $this.wordApp = New-Object -ComObject Word.Application
         $this.wordApp.DisplayAlerts = 0  # wdAlertsNone
@@ -59,13 +61,18 @@ class WordDocument {
         Write-Host "SetCustomPropertyAndSaveAs: In"
         $this.SetCustomProperty($PropertyName, $Value)
         $timestamp = Get-Date -Format "yyyyMMddHHmmss"
-        $tempFileName = "$($this.DocFileName)_$timestamp"
-        $newFilePath = Join-Path -Path $this.DocFilePath -ChildPath $tempFileName
+        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($this.DocFilePath)
+        $extension = [System.IO.Path]::GetExtension($this.DocFilePath)
+        $tempFileName = "$($baseName)_$($timestamp)$($extension)"
+        $newFilePath = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($this.DocFilePath), $tempFileName)
+        Write-Host $newFilePath
+        
         $this.SaveAs($newFilePath)
         $this.Close()
         Start-Sleep -Seconds 2  # 少し待機
-        Remove-Item -Path (Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName) -Force
-        Rename-Item -Path $newFilePath -NewName (Split-Path $this.DocFileName -Leaf)
+        Remove-Item -Path $this.DocFilePath -Force
+        Start-Sleep -Seconds 2  # 少し待機 
+        Rename-Item -Path $newFilePath -NewName (Split-Path $this.DocFilePath -Leaf)
         Write-Host "SetCustomPropertyAndSaveAs: Out"
     }
 
@@ -92,6 +99,83 @@ class WordDocument {
             Write-Host "Word library not found at $($libraryPath). Searching the entire system..."
         }
     }
+
+    # カスタムプロパティをチェックするメソッド
+    [void] checkCustomProperty2() {
+        Write-Host "Entering Check_Custom_Property"
+        if ($null -eq $this.Document) {
+            Write-Host "Document is null"
+            Write-Host "Exiting Check_Custom_Property"
+            return
+        } else {
+            $customProps = $this.Document.CustomDocumentProperties
+        }
+        if ($this.CheckNull($customProps, "customProps is null")) {
+            Write-Host "Exiting Check_Custom_Property"
+            return
+        }
+
+        $customPropsList = @()
+        foreach ($prop in $customProps) {
+            $propName = $this.InvokeComObjectMember($prop, "Name", "GetProperty", @())
+            if ($null -ne $propName) {
+                $customPropsList += $propName
+            }
+        }
+
+        # ファイルに出力
+        $outputFilePath = Join-Path -Path $this.ScriptRoot -ChildPath "custom_properties.txt"
+        this.WriteToFile($outputFilePath, $customPropsList)
+
+        Write-Host "Exiting Check_Custom_Property"
+    }
+
+
+
+    # Nullチェックメソッド
+    [bool] CheckNull([object]$obj, [string]$message) {
+        if ($null -eq $obj) {
+            Write-Host $message -ForegroundColor Red
+            return $true
+        }
+        return $false
+    }
+
+    # カスタムプロパティを読み取るメソッド
+    [object] Read_Property2([string]$PropertyName) {
+        Write-Host "IN: Read_Property"
+        $customProperties = $this.Document.CustomDocumentProperties
+        if ($this.CheckNull($customProperties, "CustomDocumentProperties is null. Cannot read property.")) {
+            Write-Host "OUT: Read_Property"
+            return $null
+        }
+    
+        $binding = "System.Reflection.BindingFlags" -as [type]
+        try {
+            $prop = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProperties, @($PropertyName))
+            $propValue = [System.__ComObject].InvokeMember("Value", $binding::GetProperty, $null, $prop, $null)
+            Write-Host "Read Property Value: $propValue"
+            Write-Host "OUT: Read_Property"
+            return $propValue
+        } catch {
+            Write-Error "Error in Read_Property: $_"
+            Write-Host "OUT: Read_Property"
+            return $null
+        }
+    }
+
+    # ファイルに内容を書き込むメソッド
+    [void] WriteToFile([string]$FilePath, [array]$Content) {
+        if ($Content.Count -eq 0) {
+            Write-Host "No content found. Deleting previous output file if it exists."
+            if (Test-Path $FilePath) {
+                Remove-Item $FilePath
+            }
+        } else {
+            $Content | Out-File -FilePath $FilePath
+        }
+    }
+
 }
 
 <# ドキュメントのパスとファイル名を設定
