@@ -1,30 +1,30 @@
 # ImportModules2.ps1
 
 # ここで直接パスを指定します
-using module ".\MyLibrary\WordDocumentProperties.psm1"
-using module ".\MyLibrary\WordDocumentUtilities.psm1"
-using module ".\MyLibrary\WordDocumentSignatures.psm1"
-using module ".\MyLibrary\WordDocumentChecks.psm1"
-using module ".\MyLibrary\WordDocument.psm1"
-using module ".\MyLibrary\Word_Class.psm1"
-using module ".\MyLibrary\Word_Table.psm1"
-# using module ".\MyLibrary\Word_Sign.psm1"
+#using module .\MyLibrary\WordDocumentProperties.psm1
+#using module .\MyLibrary\WordDocumentUtilities.psm1
+#using module .\MyLibrary\WordDocumentSignatures.psm1
+using module .\MyLibrary\WordDocumentChecks.psm1
+using module .\MyLibrary\WordDocument.psm1
+#using module .\MyLibrary\Word_Class.psm1
+#using module .\MyLibrary\Word_Table.psm1
+# using module .\MyLibrary\Word_Sign.psm1
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 # デバッグ用設定
-$DocFileName = "技100-999.docx"
-$ScriptRoot1 = "C:\Users\y0927\Documents\GitHub\PS_Script"
-$ScriptRoot2 = "D:\Github\PS_Script"
+$docFileName = "技100-999.docx"
+$scriptRoot1 = "C:\Users\y0927\Documents\GitHub\PS_Script"
+$scriptRoot2 = "D:\Github\PS_Script"
 
 # デバッグ環境に応じてパスを切り替える
 if (Test-Path "D:\") {
-    $ScriptRoot = $ScriptRoot2
+    $scriptRoot = $scriptRoot2
 } else {
-    $ScriptRoot = $ScriptRoot1
+    $scriptRoot = $scriptRoot1
 }
 
-$DocFilePath = Join-Path -Path $ScriptRoot -ChildPath $DocFileName
+$docFilePath = Join-Path -Path $scriptRoot -ChildPath $docFileName
 
 
 # デバッグメッセージを有効にする
@@ -43,7 +43,7 @@ try {
 Write-Host "Creating WordDocument instance..."
 # WordDocumentクラスのインスタンスを作成
 try {
-    $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+    $wordDoc = [WordDocument]::new($docFilePath, $scriptRoot)
     Write-Host "WordDocument instance created successfully."
 } catch {
     Write-Error "Failed to create WordDocument instance: $_"
@@ -67,12 +67,12 @@ try {
     Write-Error "Check_Word_Library failed: $_"
 }
 
-Write-Host "Calling Check_Custom_Property..."
+Write-Host "Calling checkCustomProperty..."
 try {
-    Check_Custom_Property $wordDoc
-    Write-Host "Check_Custom_Property completed successfully."
+    checkCustomProperty $wordDoc
+    Write-Host "checkCustomProperty completed successfully."
 } catch {
-    Write-Error "Check_Custom_Property failed: $_"
+    Write-Error "checkCustomProperty failed: $_"
 }
 
 Write-Host "Calling SetCustomPropertyAndSaveAs..."
@@ -82,7 +82,7 @@ try {
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
     try {
-        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        $wordDoc = [WordDocument]::new($docFilePath, $scriptRoot)
         Write-Host "WordDocument instance created successfully."
     } catch {
         Write-Error "Failed to create WordDocument instance: $_"
@@ -93,7 +93,7 @@ try {
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
     try {
-        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        $wordDoc = [WordDocument]::new($docFilePath, $scriptRoot)
         Write-Host "WordDocument instance created successfully."
     } catch {
         Write-Error "Failed to create WordDocument instance: $_"
@@ -104,7 +104,7 @@ try {
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
     try {
-        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        $wordDoc = [WordDocument]::new($docFilePath, $scriptRoot)
         Write-Host "WordDocument instance created successfully."
     } catch {
         Write-Error "Failed to create WordDocument instance: $_"
@@ -115,7 +115,7 @@ try {
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
     try {
-        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        $wordDoc = [WordDocument]::new($docFilePath, $scriptRoot)
         Write-Host "WordDocument instance created successfully."
     } catch {
         Write-Error "Failed to create WordDocument instance: $_"
@@ -126,7 +126,7 @@ try {
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
     try {
-        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        $wordDoc = [WordDocument]::new($docFilePath, $scriptRoot)
         Write-Host "WordDocument instance created successfully."
     } catch {
         Write-Error "Failed to create WordDocument instance: $_"
@@ -137,7 +137,7 @@ try {
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
     try {
-        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        $wordDoc = [WordDocument]::new($docFilePath, $scriptRoot)
         Write-Host "WordDocument instance created successfully."
     } catch {
         Write-Error "Failed to create WordDocument instance: $_"
@@ -148,7 +148,7 @@ try {
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
     try {
-        $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+        $wordDoc = [WordDocument]::new($docFilePath, $scriptRoot)
         Write-Host "WordDocument instance created successfully."
     } catch {
         Write-Error "Failed to create WordDocument instance: $_"
@@ -164,7 +164,7 @@ try {
 Write-Host "Creating WordDocument instance..."
 # WordDocumentクラスのインスタンスを作成
 try {
-    $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+    $wordDoc = [WordDocument]::new($docFilePath, $scriptRoot)
     Write-Host "WordDocument instance created successfully."
 } catch {
     Write-Error "Failed to create WordDocument instance: $_"

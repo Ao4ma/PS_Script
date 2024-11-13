@@ -1,3 +1,4 @@
+using module .\WordDocumentUtilities.psm1
 <#
 function Check_PC_Env {
     param (
@@ -31,11 +32,11 @@ function Check_Word_Library {
     Write-Host "OUT: Check_Word_Library"
 }
 #>
-function Check_Custom_Property {
+function checkCustomProperty {
     param (
         [WordDocument]$wordDoc
     )
-    Write-Host "Entering Check_Custom_Property"
+    Write-Host "Entering checkCustomProperty"
     if ($null -eq $wordDoc.Document) {
         Write-Host "Document is null"
     } else {
@@ -43,17 +44,21 @@ function Check_Custom_Property {
     }
     if ($null -eq $customProps) {
         Write-Host "customProps is null"
-        Write-Host "Exiting Check_Custom_Property"
+        Write-Host "Exiting checkCustomProperty"
         return
     }
 
     $customPropsList = @()
+    $bindingFlags = [System.Reflection.BindingFlags]::GetProperty -bor [System.Reflection.BindingFlags]::Instance -bor [System.Reflection.BindingFlags]::Public
+
     foreach ($prop in $customProps) {
-        $customPropsList += "$($prop.Name): $($prop.Value)"
+        $propName = $prop.Name
+        $propValue = $prop.GetType().InvokeMember("Value", $bindingFlags, $null, $prop, $null)
+        $customPropsList += "$propName: $propValue"
     }
 
     $outputFilePath = Join-Path -Path $wordDoc.ScriptRoot -ChildPath "custom_properties.txt"
     Write_ToFile -FilePath $outputFilePath -Content $customPropsList
 
-    Write-Host "Exiting Check_Custom_Property"
+    Write-Host "Exiting checkCustomProperty"
 }

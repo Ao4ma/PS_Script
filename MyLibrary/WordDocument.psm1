@@ -1,18 +1,20 @@
 class WordDocument {
-    [string]$DocFileName
-    [string]$DocFilePath
-    [string]$ScriptRoot
-    [System.__ComObject]$Document
-    [System.__ComObject]$WordApp
+    [string]$docFilePath
+    [string]$scriptRoot
+    [System.__ComObject]$document
+    [System.__ComObject]$wordApp
 
-    WordDocument([string]$docFileName, [string]$docFilePath, [string]$scriptRoot) {
-        $this.DocFileName = $docFileName
-        $this.DocFilePath = $docFilePath
-        $this.ScriptRoot = $scriptRoot
-        $this.WordApp = New-Object -ComObject Word.Application
-        $this.WordApp.DisplayAlerts = 0  # wdAlertsNone
-        $docPath = Join-Path -Path $this.DocFilePath -ChildPath $this.DocFileName
-        $this.Document = $this.WordApp.Documents.Open($docPath)
+    WordDocument([string]$docFilePath, [string]$scriptRoot) {
+        # $this.DocFileName
+        $this.docFilePath = $docFilePath
+        $this.scriptRoot = $scriptRoot
+        $this.wordApp = New-Object -ComObject Word.Application
+        $this.wordApp.DisplayAlerts = 0  # wdAlertsNone
+        $this.docFilePath = $docFilePath
+        if (-not (Test-Path $docFilePath)) {
+            throw "ドキュメントが見つかりません: $docFilePath"
+        }
+        $this.Document = $this.WordApp.Documents.Open($docFilePath)
     }
 
     # ドキュメントを閉じるメソッド
@@ -92,13 +94,13 @@ class WordDocument {
     }
 }
 
-# ドキュメントのパスとファイル名を設定
+<# ドキュメントのパスとファイル名を設定
 $DocFileName = "技100-999.docx"
 $DocFilePath = "D:\Github\PS_Script"
 $ScriptRoot = "D:\Github\PS_Script"
 
 # WordDocumentクラスのインスタンスを作成
-$wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+$wordDoc = [WordDocument]::new($docFilePath, $scriptRoot)
 
 # 必要な操作をここに追加
 $wordDoc.SetCustomProperty("CustomPropertyName", "CustomValue")
@@ -108,3 +110,4 @@ $wordDoc.SetCustomPropertyAndSaveAs("CustomPropertyName", "CustomValue")
 
 # ドキュメントを閉じる
 $wordDoc.Close()
+#>
