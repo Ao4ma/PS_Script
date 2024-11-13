@@ -7,7 +7,7 @@ using module .\MyLibrary\WordDocumentProperties.psm1
 using module .\MyLibrary\WordDocumentChecks.psm1
 using module .\MyLibrary\WordDocument.psm1
 #using module .\MyLibrary\Word_Class.psm1
-#using module .\MyLibrary\Word_Table.psm1
+using module .\MyLibrary\Word_Table.psm1
 # using module .\MyLibrary\Word_Sign.psm1
 
 # Access_Word5.psm1をインポート
