@@ -1,3 +1,6 @@
+using module ".\MyLibrary\WordDocumentProperties.psm1"
+using module ".\MyLibrary\WordDocument.psm1"
+
 # 型が利用可能か確認する共通関数
 function Test_TypeAvailability {
     param (
@@ -21,7 +24,7 @@ $ScriptRoot1 = "C:\Users\y0927\Documents\GitHub\PS_Script"
 $ScriptRoot2 = "D:\Github\PS_Script"
 
 # デバッグ環境に応じてパスを切り替える
-if (Test-Path $ScriptRoot2) {
+if (Test-Path "D:\") {
     $ScriptRoot = $ScriptRoot2
 } else {
     $ScriptRoot = $ScriptRoot1
@@ -44,6 +47,8 @@ function Process_MissingTypes {
         return
     }
     $doc = $word.Documents.Open($DocFilePath)
+
+    
 
     # WdInformationの直接値を使用
     $wdVerticalPositionRelativeToPage = 1
@@ -308,6 +313,7 @@ function Process_AvailableTypes {
                 
             return $cell_Info
         }
+
         
         [void] Set_Custom_Attributes_at_signature_Block() {
             $custom_Properties = $this.Doc.CustomDocumentProperties
@@ -329,15 +335,15 @@ function Process_AvailableTypes {
         $date_Property = $role_To_Property_Map[$role].Date
         $name_Property = $role_To_Property_Map[$role].Name
 
-        if ($custom_Properties -ne $null) {
+        if ($null -ne $custom_Properties) {
             try {
-                $date_Value = $custom_Properties.Item($date_Property).Value
+                $date_Value = Read_Property -wordDoc $this.wordDoc -PropertyName $date_Property
             } catch {
                 $date_Value = "日付なし"
             }
 
             try {
-                $name_Value = $custom_Properties.Item($name_Property).Value
+                $name_Value = Read_Property -wordDoc $this.wordDoc -PropertyName $name_Property
             } catch {
                 $name_Value = "名前なし"
             }
@@ -429,6 +435,9 @@ function Process_AvailableTypes {
         return
     }
     $doc = $word.Documents.Open($DocFilePath)
+
+    # WordDocument 型のインスタンスを作成
+    $wordDoc = [WordDocument]::new($doc)
 
     # 役割配列
     $roles = @("承認", "照査", "作成")
