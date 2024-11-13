@@ -394,7 +394,12 @@ function Process_AvailableTypes {
     }
 
     # WordDocument 型のインスタンスを作成
+    try {
     $wordDoc = [WordDocument]::new($DocFileName, $DocFilePath, $ScriptRoot)
+    } catch {
+        Write-Error "エラー: $($_)"
+        exit 1
+    }
 
     # 役割配列
     $roles = @("承認", "照査", "作成")
@@ -405,29 +410,59 @@ function Process_AvailableTypes {
         Write-Host "Signature_Block インスタンスが正常に作成されました。"
     } catch {
         Write-Error "エラー: $($_)"
+        if ($wordDoc -ne $null) {
         $wordDoc.Close()
+        }
         exit 1
     }
 
     # サイン欄の座標を取得
+    try {
     $signature_Coordinates = $signature_Block.Get_Signature_Coordinates()
     Write-Host "サイン欄タイプ: $($signature_Coordinates.Type)"
     foreach ($sign_Cell in $signature_Coordinates.Sign_Cells) {
         Write-Host "サイン用セル：役割: $($sign_Cell.Role), 行: $($sign_Cell.Row), 列: $($sign_Cell.Column)"
+        }
+    } catch {
+        Write-Error "エラー: $($_)"
+        if ($wordDoc -ne $null) {
+            $wordDoc.Close()
+        }
+        exit 1
     }
 
     # カスタム属性を設定
+    try {
     $signature_Block.Set_Custom_Attributes_at_signature_Block()
+    } catch {
+        Write-Error "エラー: $($_)"
+        if ($wordDoc -ne $null) {
+            $wordDoc.Close()
+        }
+        exit 1
+    }
 
     # ドキュメントを保存して閉じる
+    try {
     $wordDoc.Document.Save()
     $wordDoc.Close()
+    } catch {
+        Write-Error "エラー: $($_)"
+        if ($wordDoc -ne $null) {
+            $wordDoc.Close()
+        }
+        exit 1
+    }
 
     # クリーンアップ
+    try {
     [System.Runtime.InteropServices.Marshal]::ReleaseComObject($wordDoc.Document) | Out-Null
     [System.Runtime.InteropServices.Marshal]::ReleaseComObject($wordDoc.WordApp) | Out-Null
     [System.GC]::Collect()
     [System.GC]::WaitForPendingFinalizers()
+    } catch {
+        Write-Error "エラー: $($_)"
+    }
 }
 
 # メイン処理部
