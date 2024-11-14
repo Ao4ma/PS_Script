@@ -1,4 +1,4 @@
-using module .\WordDocumentUtilities.psm1
+# using module .\WordDocumentUtilities.psm1
 
 class WordDocument {
     [string]$docFilePath
@@ -18,6 +18,25 @@ class WordDocument {
         }
         $this.Document = $this.WordApp.Documents.Open($docFilePath)
     }
+
+    # ドキュメントをセーブして閉じるメソッド
+    [void] Save() {
+        if ($null -ne $this.Document) {
+            $this.Document.Close([ref]-1)  # -1はwdSaveChangesに相当
+            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.Document) | Out-Null
+            # Remove-Variable -Name Document
+            $this.Document = $null
+        }
+        if ($null -ne $this.WordApp) {
+            $this.WordApp.Quit()
+            [System.Runtime.InteropServices.Marshal]::ReleaseComObject($this.WordApp) | Out-Null
+            # Remove-Variable -Name WordApp
+            $this.WordApp = $null
+        }
+        [gc]::collect()
+        [gc]::WaitForPendingFinalizers()
+    }
+
 
     # ドキュメントを閉じるメソッド
     [void] Close() {
@@ -76,6 +95,26 @@ class WordDocument {
         Write-Host "SetCustomPropertyAndSaveAs: Out"
     }
 
+    # 上書き保存するメソッド
+    [void] SaveForBugMeasures() {
+        Write-Host "SaveForBugMeasures: In"
+        $timestamp = Get-Date -Format "yyyyMMddHHmmss"
+        $baseName = [System.IO.Path]::GetFileNameWithoutExtension($this.DocFilePath)
+        $extension = [System.IO.Path]::GetExtension($this.DocFilePath)
+        $tempFileName = "$($baseName)_$($timestamp)$($extension)"
+        $newFilePath = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($this.DocFilePath), $tempFileName)
+        Write-Host $newFilePath
+
+        $this.SaveAs($newFilePath)
+        $this.Close()
+        Start-Sleep -Seconds 1  # 少し待機
+        Remove-Item -Path $this.DocFilePath -Force
+        # Start-Sleep -Seconds 1  # 少し待機 
+        Rename-Item -Path $newFilePath -NewName (Split-Path $this.DocFilePath -Leaf)
+        Write-Host "SaveForBugMeasures: Out"
+    }
+
+
     # PC環境をチェックするメソッド
     [void] Check_PC_Env() {
         $envInfo = @{
@@ -116,16 +155,28 @@ class WordDocument {
         }
 
         $customPropsList = @()
+        $bindingFlags = [System.Reflection.BindingFlags]::GetProperty -bor [System.Reflection.BindingFlags]::Instance -bor [System.Reflection.BindingFlags]::Public
+    
+        foreach ($prop in $customProps) {
+            $propName = $this.InvokeComObjectMember($prop, "Name", $bindingFlags,  $null,@())
+            if ($null -ne $propName) {
+                $propValue = $this.Document.InvokeComObjectMember($prop, "Value", $bindingFlags,  $null,@())
+                $customPropsList += "${propName}: ${propValue}"
+            }
+        }
+
+    <#
+        $customPropsList = @()
         foreach ($prop in $customProps) {
             $propName = $this.InvokeComObjectMember($prop, "Name", "GetProperty", @())
             if ($null -ne $propName) {
                 $customPropsList += $propName
             }
         }
-
+#>
         # ファイルに出力
         $outputFilePath = Join-Path -Path $this.ScriptRoot -ChildPath "custom_properties.txt"
-        this.WriteToFile($outputFilePath, $customPropsList)
+        $this.WriteToFile($outputFilePath, $customPropsList)
 
         Write-Host "Exiting Check_Custom_Property"
     }
@@ -142,11 +193,11 @@ class WordDocument {
     }
 
     # カスタムプロパティを読み取るメソッド
-    [object] Read_Property2([string]$PropertyName) {
+    [string] Read_Property2([string]$PropertyName) {
         Write-Host "IN: Read_Property"
         $customProperties = $this.Document.CustomDocumentProperties
         if ($this.CheckNull($customProperties, "CustomDocumentProperties is null. Cannot read property.")) {
-            Write-Host "OUT: Read_Property"
+            # Write-Host "OUT: Read_Property"
             return $null
         }
     
@@ -155,11 +206,12 @@ class WordDocument {
             $prop = [System.__ComObject].InvokeMember("Item", $binding::GetProperty, $null, $customProperties, @($PropertyName))
             $propValue = [System.__ComObject].InvokeMember("Value", $binding::GetProperty, $null, $prop, $null)
             Write-Host "Read Property Value: $propValue"
-            Write-Host "OUT: Read_Property"
-            return $propValue
+            # Write-Host "OUT: Read_Property"
+            return [string]$propValue
         } catch {
             Write-Error "Error in Read_Property: $_"
-            Write-Host "OUT: Read_Property"
+            # Write-Host "例外の詳細: $_"
+            # Write-Host "OUT: Read_Property"
             return $null
         }
     }
@@ -174,6 +226,13 @@ class WordDocument {
         } else {
             $Content | Out-File -FilePath $FilePath
         }
+    }
+
+
+
+    # COMオブジェクトのメンバーを呼び出すメソッド
+    [object] InvokeComObjectMember([System.__ComObject]$comObject, [string]$memberName, [System.Reflection.BindingFlags]$bindingFlags, $null,[object[]]$parameters) {
+        return [System.__ComObject].InvokeMember($memberName, $bindingFlags, $null, $comObject, $null,$parameters)
     }
 
 }

@@ -1,3 +1,4 @@
+<#
 function Write_ToFile {
     param (
         [string]$FilePath,
@@ -12,7 +13,7 @@ function Write_ToFile {
         $Content | Out-File -FilePath $FilePath -Encoding UTF8
     }
 }
-
+#>
 function SaveDocumentWithBackup {
     param (
         [WordDocument]$wordDoc

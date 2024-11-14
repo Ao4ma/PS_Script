@@ -1,4 +1,5 @@
 using module .\WordDocument.psm1
+
 class Signature_Block {
     [WordDocument]$WordDoc
     [string[]]$Roles
@@ -122,6 +123,8 @@ class Signature_Block {
         $sign_Cells = $this.Get_Signature_Coordinates().Sign_Cells
 
         foreach ($cell in $sign_Cells) {
+            $date_Value = $null
+            $name_Value = $null
             $role = $cell.Role
             $row = $cell.Row
             $column = $cell.Column
@@ -130,15 +133,34 @@ class Signature_Block {
             $name_Property = $role_To_Property_Map[$role].Name
 
             if ($null -ne $custom_Properties) {
+                $date_Value = $this.WordDoc.Read_Property2($date_Property)
+                if ($null -eq $date_Value) {
+                    Write-Host "errが発生しました: "
+                    $date_Value = "日付なし"
+                }
+                $name_Value = $this.WordDoc.Read_Property2($name_Property)
+                if ($null -eq $name_Value) {
+                    Write-Host "errが発生しました: "
+                    $name_Value = "日付なし"
+                }
+            } else {
+                $date_Value = "日付なし"
+                $name_Value = "名前なし"
+            }
+
+            <#
+            if ($null -ne $custom_Properties) {
                 try {
-                    $date_Value = $this.WordDoc.Read_Property($date_Property)
+                    $date_Value = $this.WordDoc.Read_Property2($date_Property)
                 } catch {
+                    Write-Host "例外が発生しました: $_"
                     $date_Value = "日付なし"
                 }
 
                 try {
-                    $name_Value = $this.WordDoc.Read_Property($name_Property)
+                    $name_Value = $this.WordDoc.Read_Property2($name_Property)
                 } catch {
+                    Write-Host "例外が発生しました: $_"
                     $name_Value = "名前なし"
                 }
             } else {
@@ -146,13 +168,22 @@ class Signature_Block {
                 $name_Value = "名前なし"
             }
 
+            #>
+            Write-Host "書き込み開始"
             $cell_Text = "$($date_Value)`n$($name_Value)"
             $this.Table.Cell($row, $column).Range.Text = $cell_Text
             $this.Table.Cell($row, $column).Range.ParagraphFormat.Alignment = 1  # wdAlignParagraphCenter
             $this.Table.Cell($row, $column).Range.Paragraphs[1].Range.Font.Size = 8
             $this.Table.Cell($row, $column).Range.Paragraphs[2].Range.Font.Size = 10
+            Write-Host "書き込み完了"
         }
+        
+        $this.wordDoc.SaveForBugMeasures()
     }
+
+
+
+
 }
 
 function Find_TablesWithRoles {

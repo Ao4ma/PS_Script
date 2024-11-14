@@ -3,8 +3,5 @@
 		{
 			"path": "."
 		}
-	],
-	"settings": {
-		"svn.ignoreMissingSvnWarning": true
-	}
+	]
 }

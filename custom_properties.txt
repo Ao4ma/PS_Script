@@ -1,9 +1,0 @@
-CustomProperty31
-承認者
-承認日
-照査者
-照査日
-作成者
-作成日
-CustomProperty33
-CustomProperty1

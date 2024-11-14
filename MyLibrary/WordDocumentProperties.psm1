@@ -25,7 +25,7 @@ function Set_CustomProperty {
     }
 }
 #>
-function Read_Property {
+function ReadProperty {
     param (
         [WordDocument]$wordDoc,
         [string]$PropertyName
@@ -51,7 +51,7 @@ function Read_Property {
     return $propValue
 }
 
-function Update_Property {
+function UpdateProperty {
     param (
         [WordDocument]$wordDoc,
         [string]$PropertyName,

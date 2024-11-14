@@ -1,4 +1,4 @@
-# ImportModules2.ps1
+# ImportModules3.ps1
 
 # ここで直接パスを指定します
 using module .\MyLibrary\WordDocumentProperties.psm1
@@ -6,7 +6,7 @@ using module .\MyLibrary\WordDocumentProperties.psm1
 #using module .\MyLibrary\WordDocumentSignatures.psm1
 using module .\MyLibrary\WordDocumentChecks.psm1
 using module .\MyLibrary\WordDocument.psm1
-#using module .\MyLibrary\Word_Class.psm1
+using module .\MyLibrary\Word_Class.psm1
 using module .\MyLibrary\Word_Table2.psm1
 # using module .\MyLibrary\Word_Sign.psm1
 
@@ -236,7 +236,7 @@ try {
    # SetCustomProperty
    $wordDoc.SetCustomProperty("承認者", "大谷")
    $wordDoc.SetCustomProperty("承認日", "2024/11/11")
-   $wordDoc.SetCustomProperty("照査者", "大谷")
+   $wordDoc.SetCustomProperty("照査者", "ベッツ")
    $wordDoc.SetCustomProperty("照査日", "2024/11/12")
    $wordDoc.SetCustomProperty("作成者", "フリーマン")
    $wordDoc.SetCustomProperty("作成日", "2024/11/13")
@@ -298,7 +298,7 @@ $roles = @("承認", "照査", "作成")
 
 # Signature_Blockクラスのインスタンスを作成
 try {
-    $signature_Block = [Word_Table.Signature_Block]::new($wordDoc, $roles, 1)  # 直接値を使用
+    $signature_Block = [Word_Table2.Signature_Block]::new($wordDoc, $roles, 1)  # 直接値を使用
     Write-Host "Signature_Block インスタンスが正常に作成されました。"
 } catch {
     Write-Error "エラー: $($_)"
