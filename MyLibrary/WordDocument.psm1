@@ -69,9 +69,9 @@ class WordDocument {
         
         $this.SaveAs($newFilePath)
         $this.Close()
-        Start-Sleep -Seconds 2  # 少し待機
+        Start-Sleep -Seconds 1  # 少し待機
         Remove-Item -Path $this.DocFilePath -Force
-        Start-Sleep -Seconds 2  # 少し待機 
+        # Start-Sleep -Seconds 1  # 少し待機 
         Rename-Item -Path $newFilePath -NewName (Split-Path $this.DocFilePath -Leaf)
         Write-Host "SetCustomPropertyAndSaveAs: Out"
     }

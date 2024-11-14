@@ -247,13 +247,13 @@ class Signature_Block {
 
             if ($null -ne $custom_Properties) {
                 try {
-                    $date_Value = Read_Property -wordDoc $this.Doc -PropertyName $date_Property
+                    $date_Value = $this.wordDoc.Read_Property2($date_Property)
                 } catch {
                     $date_Value = "日付なし"
                 }
 
                 try {
-                    $name_Value = Read_Property -wordDoc $this.Doc -PropertyName $name_Property
+                    $name_Value = $this.wordDoc.Read_Property2($name_Property)
                 } catch {
                     $name_Value = "名前なし"
                 }

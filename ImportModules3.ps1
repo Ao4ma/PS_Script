@@ -298,7 +298,7 @@ $roles = @("承認", "照査", "作成")
 
 # Signature_Blockクラスのインスタンスを作成
 try {
-    $signature_Block = [Word_Table.Signature_Block]::new($wordDoc.Document, $roles, 1)  # 直接値を使用
+    $signature_Block = [Word_Table.Signature_Block]::new($wordDoc, $roles, 1)  # 直接値を使用
     Write-Host "Signature_Block インスタンスが正常に作成されました。"
 } catch {
     Write-Error "エラー: $($_)"
