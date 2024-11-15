@@ -1,5 +1,3 @@
-# ImportModules4.ps1
-
 # ここで直接パスを指定します
 using module ".\MyLibrary\WordDocumentProperties.psm1"
 using module ".\MyLibrary\WordDocumentChecks.psm1"
@@ -11,19 +9,14 @@ param (
     [string]$docFilePath
 )
 
-# スクリプトのファイル名を取得
-$scriptFileName = [System.IO.Path]::GetFileName($MyInvocation.MyCommand.Definition)
-
-# スクリプトのファイル名を表示
-Write-Host "Running script: $scriptFileName"
-
-if (-not $docFilePath) {
-    Write-Error "Usage: .\$scriptFileName -docFilePath <path to doc file>"
-    exit 1
-}
+# ドキュメントファイル名を変数に設定
+$docFileName = "技100-999.docx"
 
 # スクリプトのルートパスを取得
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
+
+# デバッグ用のデフォルトファイルパスを設定
+$defaultDocFilePath = Join-Path -Path $scriptRoot -ChildPath $docFileName
 
 # 作業ホームフォルダのパスを設定
 $workHomeFolder = Join-Path -Path $scriptRoot -ChildPath "WorkHome"
@@ -33,27 +26,80 @@ if (-not (Test-Path -Path $workHomeFolder)) {
     New-Item -Path $workHomeFolder -ItemType Directory | Out-Null
 }
 
-# 作業ホームフォルダに移動
-Set-Location -Path $workHomeFolder
+# ログファイルとエラーファイルのパスを設定
+$logFilePath = Join-Path -Path $workHomeFolder -ChildPath "log.txt"
+$errorFilePath = Join-Path -Path $workHomeFolder -ChildPath "error.txt"
 
-# フルパスを取得
-$fullDocFilePath = Resolve-Path -Path $docFilePath
+# ファイルパスの確認と設定
+if (-not (Test-Path $docFilePath)) {
+    if (Test-Path $defaultDocFilePath) {
+        Write-Host "No valid file path provided. Using default file path for debugging: $defaultDocFilePath"
+        $docFilePath = $defaultDocFilePath
+    } else {
+        $errorMessage = "No valid file path provided and default file not found."
+        Write-Error $errorMessage
+        $errorMessage | Out-File -FilePath $errorFilePath -Append
+        exit 1
+    }
+}
 
+# デバッグメッセージを有効にする
+$DebugPreference = "Continue"
+
+Write-Host "Creating Word Application COM object..."
+# クラス外でCOMオブジェクトを作成
+try {
+    # $wordApp = New-Object -ComObject Word.Application
+    Write-Host "Word Application COM object created successfully."
+} catch {
+    $errorMessage = "Failed to create Word Application COM object: $_"
+    Write-Error $errorMessage
+    $errorMessage | Out-File -FilePath $errorFilePath -Append
+    exit 1
+}
+
+Write-Host "Creating WordDocument instance..."
 # WordDocumentクラスのインスタンスを作成
-$wordDoc = [WordDocument]::new($fullDocFilePath, $scriptRoot)
+try {
+    $wordDoc = [WordDocument]::new($docFilePath, $scriptRoot)
+    Write-Host "WordDocument instance created successfully."
+} catch {
+    $errorMessage = "Failed to create WordDocument instance: $_"
+    Write-Error $errorMessage
+    $errorMessage | Out-File -FilePath $errorFilePath -Append
+    exit 1
+}
 
+Write-Host "Calling Check_PC_Env..."
 # メソッドの呼び出し例
-$wordDoc.Check_PC_Env()
-$wordDoc.Check_Word_Library()
-$wordDoc.SetCustomProperty("CustomProperty1", "Value1")
-$wordDoc.Check_Custom_Property()
-$wordDoc.SetCustomPropertyAndSaveAs("CustomProperty21", "Value21")
+try {
+    $wordDoc.Check_PC_Env()
+    Write-Host "Check_PC_Env completed successfully."
+} catch {
+    $errorMessage = "Check_PC_Env failed: $_"
+    Write-Error $errorMessage
+    $errorMessage | Out-File -FilePath $errorFilePath -Append
+}
 
-# 新しいインスタンスを作成してから操作を続行
-$wordDoc = [WordDocument]::new($fullDocFilePath, $scriptRoot)
+Write-Host "Calling Check_Word_Library..."
+try {
+    $wordDoc.Check_Word_Library()
+    Write-Host "Check_Word_Library completed successfully."
+} catch {
+    $errorMessage = "Check_Word_Library failed: $_"
+    Write-Error $errorMessage
+    $errorMessage | Out-File -FilePath $errorFilePath -Append
+}
 
-# サイン欄に名前と日付を配置
-# $wordDoc.FillSignatures()
+Write-Host "Calling checkCustomProperty..."
+try {
+    $wordDoc.checkCustomProperty2()
+    Write-Host "checkCustomProperty completed successfully."
+} catch {
+    $errorMessage = "checkCustomProperty failed: $_"
+    Write-Error $errorMessage
+    $errorMessage | Out-File -FilePath $errorFilePath -Append
+}
 
 # カスタムプロパティを読み取る
 $propValue = $wordDoc.Read_Property("CustomProperty1")
@@ -74,3 +120,6 @@ $wordDoc.Check_Custom_Property()
 
 # ドキュメントを閉じる
 $wordDoc.Close()
+
+# ログファイルに成功メッセージを記録
+"Script completed successfully." | Out-File -FilePath $logFilePath -Append
