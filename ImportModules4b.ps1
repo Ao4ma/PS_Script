@@ -102,19 +102,19 @@ try {
 }
 
 # カスタムプロパティを読み取る
-$propValue = $wordDoc.Read_Property("CustomProperty1")
+$propValue = $wordDoc.Read_Property2("CustomProperty1")
 Write-Host "Read Property Value: $propValue"
-$propValue = $wordDoc.Read_Property("CustomProperty2")
+$propValue = $wordDoc.Read_Property2("CustomProperty2")
 Write-Host "Read Property Value: $propValue"
-$propValue = $wordDoc.Read_Property("CustomProperty21")
+$propValue = $wordDoc.Read_Property2("CustomProperty21")
 Write-Host "Read Property Value: $propValue"
 
 # カスタムプロパティを更新する
 # $wordDoc.Update_Property("CustomProperty2", "UpdatedValue")
 
 # カスタムプロパティを削除する
-$wordDoc.Delete_Property("CustomProperty21")
-$wordDoc.Check_Custom_Property()
+# $wordDoc.Delete_Property("CustomProperty21")
+$wordDoc.CheckCustomProperty2()
 # $wordDoc.Delete_Property("CustomProperty1")
 # $wordDoc.Check_Custom_Property()
 

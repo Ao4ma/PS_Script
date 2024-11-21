@@ -86,6 +86,7 @@ try {
     Write-Error "checkCustomProperty failed: $_"
 }
 
+<#
 # カスタムプロパティを読み取る
 $propValue1 = $wordDoc.Read_Property2("CustomProperty1")
 Write-Host "Read Property Value: $propValue1"
@@ -96,9 +97,10 @@ Write-Host "Read Property Value: $propValue3"
 $propValue4 = $wordDoc.Read_Property2("承認者")
 Write-Host "Read Property Value: $propValue4"
 
+
 Write-Host "Calling SetCustomPropertyAndSaveAs..."
 try {
-    $wordDoc.SetCustomPropertyAndSaveAs("CustomProperty31", "Value31")
+    $wordDoc.SetCustomPropertyAndSaveAs("通知書No", "ABC99999")
 
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
@@ -111,6 +113,7 @@ try {
     }
     $wordDoc.SetCustomPropertyAndSaveAs("承認者", "大谷")
 
+
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
     try {
@@ -121,6 +124,7 @@ try {
         exit 1
     }
     $wordDoc.SetCustomPropertyAndSaveAs("承認日", "2024/11/11")
+
 
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
@@ -133,6 +137,7 @@ try {
     }
     $wordDoc.SetCustomPropertyAndSaveAs("照査者", "ベッツ")
 
+
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
     try {
@@ -143,6 +148,7 @@ try {
         exit 1
     }
     $wordDoc.SetCustomPropertyAndSaveAs("照査日", "2024/11/12")
+
 
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
@@ -155,6 +161,7 @@ try {
     }
     $wordDoc.SetCustomPropertyAndSaveAs("作成者", "フリーマン")
 
+
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
     try {
@@ -166,6 +173,7 @@ try {
     }
     $wordDoc.SetCustomPropertyAndSaveAs("作成日", "2024/11/13")
 
+<#
     Write-Host "Creating WordDocument instance..."
     # WordDocumentクラスのインスタンスを作成
     try {
@@ -176,8 +184,8 @@ try {
         exit 1
     }
     $wordDoc.SetCustomPropertyAndSaveAs("CustomProperty33", "Value33")
-    Write-Host "SetCustomPropertyAndSaveAs completed successfully."
 
+    Write-Host "SetCustomPropertyAndSaveAs completed successfully."
 } catch {
     Write-Error "SetCustomPropertyAndSaveAs failed: $_"
 }
@@ -210,7 +218,7 @@ try {
 } catch {
     Write-Error "SaveAs failed: $_"
 }
-#>
+
 
 Write-Host "Calling SetCustomProperty..."
 try {
@@ -221,7 +229,7 @@ try {
     Write-Error "SetCustomProperty failed: $_"
 }
 
-<#
+
 Write-Host "Calling FillSignatures..."
 try {
     # サイン欄に名前と日付を配置
@@ -246,11 +254,11 @@ Write-Host "Calling SetCustomProperty..."
 try {
    # SetCustomProperty
    $wordDoc.SetCustomProperty("承認者", "大谷")
-   $wordDoc.SetCustomProperty("承認日", "2024/11/11")
+   $wordDoc.SetCustomProperty("承認日", "'24/11/11")
    $wordDoc.SetCustomProperty("照査者", "ベッツ")
-   $wordDoc.SetCustomProperty("照査日", "2024/11/12")
+   $wordDoc.SetCustomProperty("照査日", "'24/11/12")
    $wordDoc.SetCustomProperty("作成者", "フリーマン")
-   $wordDoc.SetCustomProperty("作成日", "2024/11/13")
+   $wordDoc.SetCustomProperty("作成日", "'24/11/13")
     Write-Host "SetCustomProperty completed successfully."
 } catch {
     Write-Error "SetCustomProperty failed: $_"
@@ -291,7 +299,7 @@ try {
 } catch {
     Write-Error "Update_Property failed: $_"
 }
-#>
+
 
 Write-Host "Calling Delete_Property..."
 try {
@@ -301,7 +309,7 @@ try {
 } catch {
     Write-Error "Delete_Property failed: $_"
 }
-
+#>
 
 
 # 役割配列
